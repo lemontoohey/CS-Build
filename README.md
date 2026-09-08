@@ -48,7 +48,7 @@ Go to **Settings** in the app to choose. There are two options, and you can swit
 
 (A Supabase/Postgres backend is also built in — `supabase/schema.sql` and the `store` code both still work — but it isn't shown as an option on the Settings page, to keep the choice simple for whoever's actually using the app day to day. If you ever want it back, it's a couple of lines in `routes/settings.js`.)
 
-Whichever you pick, uploaded files (receipts, DA approvals, contracts, etc.) always stay in `data/documents/` on whichever computer you uploaded them from — that part isn't affected by this choice yet.
+Uploaded files (receipts, DA approvals, contracts, etc.) follow the same choice: on "This computer only" they're saved in `data/documents/`; on Google Drive they're uploaded there too, so they survive a server restart or a redeploy — important if this ends up hosted somewhere rather than run on a laptop.
 
 `data/` is gitignored regardless of backend. If you're using "This computer only," **back it up yourself** — copy `data/` somewhere safe periodically (Time Machine, a synced folder, whatever you already use).
 
@@ -76,16 +76,26 @@ Built now:
 - **Trades & suppliers directory** — contact details, licence numbers, and insurance expiry, auto-flagged amber inside 30 days and red once lapsed. Trades with insurance issues also surface as a warning banner on the dashboard.
 - **Compliance checklist** — seeded from what's actually on this plan set (the BASIX Commitments table, DA conditions including the REV B wall moves, the bushfire water/BAL requirement, the pool safety certificate, and AWTS septic commissioning), not a generic template. Click to check off; add your own items under any regime.
 - Dashboard now also shows the next unstarted schedule stage and a count of outstanding compliance items.
-- **Settings page** — pick your AI provider and paste in your own API key (not tied to any one account); choose where your data lives (this computer, your own Google Drive, or Supabase) and switch between them without losing anything, all without editing a single file.
+- **Settings page** — pick your AI provider and paste in your own API key (not tied to any one account); choose where your data lives (this computer or your own Google Drive) and switch between them without losing anything, all without editing a single file.
 - **Works fully with no AI key at all.** Nothing in this app requires AI — it's an optional convenience for reading receipts, not a dependency:
   - **Materials calculators** — plasterboard/cladding sheets, roof sheeting, tiles, paint, concrete volume, and timber studs/fence post counts, from plain measurements (no AI plan-reading needed). Each gives a one-click "add to materials list" so a result becomes a real BOQ line straight away.
   - **Quick answers** on the dashboard — total spent, categories over budget, biggest spend category, build progress, compliance remaining, materials not yet ordered — the handful of things people actually ask about a budget/schedule, computed directly from your data instead of asked to an AI.
   - Receipts without AI just get filed in the documents vault for you to enter manually — always been true, still true.
 
+Also built: uploaded documents (receipts, DA approvals, contracts, etc.) follow the Google Drive choice too now, not just the budget/schedule data — important for a hosted deployment, since a server's local disk usually doesn't survive a restart.
+
 Not built yet (see `house-cooper-build-tool-spec.md` for the full plan):
 - AI materials takeoff read straight off the plan drawings (the calculators above cover the "I know the measurements, what do I need" case; reading quantities off a PDF plan set is a different, AI-only capability, not yet built).
 - Voice diary entries.
-- Uploaded documents/receipts moving with you to Google Drive/Supabase too — right now those still stay on whichever computer uploaded them, only the budget/schedule/etc. data follows your backend choice.
+
+## Hosting this somewhere public
+
+You don't have to run this on your own laptop — the repo being public means most hosts (Render, Railway, etc.) can deploy it straight from GitHub with no account-linking needed. A couple of things matter once it's not running on your own machine:
+
+- **"This computer only" (SQLite) isn't durable on most free hosting.** Free tiers typically wipe local disk on every restart/redeploy (Render's does, after 15 minutes idle). That means budget/schedule data AND uploaded documents would vanish periodically. **Use the Google Drive backend for anything hosted** — go to Settings and connect it once the service is up.
+- **The Google Drive redirect URI has to match.** If you set up the Google Cloud OAuth client per the steps above using `http://localhost:3000/...`, add a second Authorized Redirect URI for the live URL (`https://<your-app>.onrender.com/oauth/google/callback`) once you know it, and set `GOOGLE_REDIRECT_URI` to that same value in the host's environment variables.
+- **Node version**: the host needs to run Node 22.5+. `package.json`'s `engines` field already declares this; most hosts read it automatically.
+- **Start command**: `node server.js` (or `npm start`). No build step — there's nothing to compile or install.
 
 ## Troubleshooting: "disk I/O error" from SQLite
 
