@@ -32,7 +32,7 @@ async function handleCompliancePage(req, res, { sendHtml }, flash) {
                 ? 'bg-emerald-600 border-emerald-600'
                 : 'bg-white border-slate-300'
             }" aria-label="Toggle done"></button>
-            <span class="text-sm ${i.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-800'}">${escapeHtml(
+            <span class="text-sm ${i.status === 'done' ? 'text-slate-400 line-through' : 'text-[#3d4c5a]'}">${escapeHtml(
             i.item
           )}</span>
           </form>`
@@ -73,7 +73,7 @@ async function handleCompliancePage(req, res, { sendHtml }, flash) {
         <label class="block text-sm font-medium mb-1">Item</label>
         <input type="text" name="item" required class="w-full rounded border border-slate-300 px-3 py-2 text-sm" />
       </div>
-      <button class="bg-slate-800 text-white px-4 py-2 rounded text-sm hover:bg-slate-700">Add item</button>
+      <button class="bg-[#4f6070] text-white px-4 py-2 rounded text-sm hover:bg-[#3d4c5a]">Add item</button>
     </form>
   `;
 

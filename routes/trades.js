@@ -110,7 +110,7 @@ async function handleTradesPage(req, res, { sendHtml }, flash) {
         <textarea name="scope_notes" rows="2" class="w-full rounded border border-slate-300 px-3 py-2 text-sm"></textarea>
       </div>
       <div class="col-span-2">
-        <button class="bg-slate-800 text-white px-4 py-2 rounded text-sm hover:bg-slate-700">Add trade</button>
+        <button class="bg-[#4f6070] text-white px-4 py-2 rounded text-sm hover:bg-[#3d4c5a]">Add trade</button>
       </div>
     </form>
   `;

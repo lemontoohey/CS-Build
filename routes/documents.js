@@ -84,7 +84,7 @@ async function handleDocumentsPage(req, res, { sendHtml }, query) {
       <select id="categorySelect" class="w-full rounded border border-slate-300 px-3 py-2 text-sm mb-4">
         ${uploadOptions}
       </select>
-      <button id="uploadBtn" class="bg-slate-800 text-white px-4 py-2 rounded text-sm hover:bg-slate-700">Upload</button>
+      <button id="uploadBtn" class="bg-[#4f6070] text-white px-4 py-2 rounded text-sm hover:bg-[#3d4c5a]">Upload</button>
       <div id="status" class="mt-4 text-sm text-slate-600"></div>
     </div>
 

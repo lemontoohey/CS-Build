@@ -37,7 +37,7 @@ async function handleReceiptsNewPage(req, res, { sendHtml }) {
     <div class="bg-white rounded-lg border border-slate-200 p-6 max-w-lg">
       <input id="fileInput" type="file" accept="image/*,application/pdf" capture="environment"
         class="block w-full text-sm mb-4" />
-      <button id="uploadBtn" class="bg-slate-800 text-white px-4 py-2 rounded text-sm hover:bg-slate-700">
+      <button id="uploadBtn" class="bg-[#4f6070] text-white px-4 py-2 rounded text-sm hover:bg-[#3d4c5a]">
         Upload
       </button>
       <div id="status" class="mt-4 text-sm text-slate-600"></div>

@@ -9,14 +9,14 @@ const PROVIDER_LABELS = { anthropic: 'Anthropic (Claude)', openai: 'OpenAI (GPT)
 
 function backendCard({ id, emoji, title, description, isActive, bodyHtml }) {
   return `<div class="rounded-lg border-2 ${
-    isActive ? 'border-slate-800' : 'border-slate-200'
+    isActive ? 'border-[#4f6070]' : 'border-slate-200'
   } bg-white p-5 mb-4">
     <div class="flex items-start gap-3">
       <span class="text-2xl leading-none">${emoji}</span>
       <div class="flex-1">
         <div class="flex items-center gap-2">
           <h3 class="font-semibold text-lg">${escapeHtml(title)}</h3>
-          ${isActive ? '<span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-white">In use now</span>' : ''}
+          ${isActive ? '<span class="text-xs px-2 py-0.5 rounded-full bg-[#4f6070] text-white">In use now</span>' : ''}
         </div>
         <p class="text-sm text-slate-600 mt-0.5 mb-3">${description}</p>
         <div id="${id}">${bodyHtml}</div>
@@ -47,7 +47,7 @@ async function handleSettingsPage(req, res, { sendHtml }, flash) {
       cfg.backend === 'sqlite'
         ? ''
         : `<form method="post" action="/settings/backend/local">
-             <button class="text-sm bg-slate-800 text-white px-3 py-1.5 rounded hover:bg-slate-700">
+             <button class="text-sm bg-[#4f6070] text-white px-3 py-1.5 rounded hover:bg-[#3d4c5a]">
                Switch to this computer only
              </button>
            </form>`,
@@ -64,7 +64,7 @@ async function handleSettingsPage(req, res, { sendHtml }, flash) {
       ${
         cfg.backend !== 'google_drive'
           ? `<form method="post" action="/settings/backend/google_drive">
-               <button class="text-sm bg-slate-800 text-white px-3 py-1.5 rounded hover:bg-slate-700">Use Google Drive</button>
+               <button class="text-sm bg-[#4f6070] text-white px-3 py-1.5 rounded hover:bg-[#3d4c5a]">Use Google Drive</button>
              </form>`
           : ''
       }
@@ -74,7 +74,7 @@ async function handleSettingsPage(req, res, { sendHtml }, flash) {
     </div>`;
   } else {
     driveBody = `<a href="/oauth/google/start"
-      class="inline-block text-sm bg-slate-800 text-white px-3 py-1.5 rounded hover:bg-slate-700">
+      class="inline-block text-sm bg-[#4f6070] text-white px-3 py-1.5 rounded hover:bg-[#3d4c5a]">
       Connect Google Drive
     </a>`;
   }
@@ -121,7 +121,7 @@ async function handleSettingsPage(req, res, { sendHtml }, flash) {
             Stored only on this computer — never sent anywhere except that provider's API.
           </p>
         </div>
-        <button class="bg-slate-800 text-white px-4 py-2 rounded text-sm hover:bg-slate-700">Save</button>
+        <button class="bg-[#4f6070] text-white px-4 py-2 rounded text-sm hover:bg-[#3d4c5a]">Save</button>
       </form>
       ${
         key
