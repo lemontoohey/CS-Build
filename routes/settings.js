@@ -47,7 +47,7 @@ async function handleSettingsPage(req, res, { sendHtml }, flash) {
       cfg.backend === 'sqlite'
         ? ''
         : `<form method="post" action="/settings/backend/local">
-             <button class="text-sm bg-[#4f6070] text-white px-3 py-1.5 rounded hover:bg-[#3d4c5a]">
+             <button class="text-sm bg-[#9b1b15] hover:bg-[#7a1611] text-white px-3 py-1.5 rounded transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]">
                Switch to this computer only
              </button>
            </form>`,
@@ -64,7 +64,7 @@ async function handleSettingsPage(req, res, { sendHtml }, flash) {
       ${
         cfg.backend !== 'google_drive'
           ? `<form method="post" action="/settings/backend/google_drive">
-               <button class="text-sm bg-[#4f6070] text-white px-3 py-1.5 rounded hover:bg-[#3d4c5a]">Use Google Drive</button>
+               <button class="text-sm bg-[#9b1b15] hover:bg-[#7a1611] text-white px-3 py-1.5 rounded transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]">Use Google Drive</button>
              </form>`
           : ''
       }
@@ -74,7 +74,7 @@ async function handleSettingsPage(req, res, { sendHtml }, flash) {
     </div>`;
   } else {
     driveBody = `<a href="/oauth/google/start"
-      class="inline-block text-sm bg-[#4f6070] text-white px-3 py-1.5 rounded hover:bg-[#3d4c5a]">
+      class="inline-block text-sm bg-[#9b1b15] hover:bg-[#7a1611] text-white px-3 py-1.5 rounded transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]">
       Connect Google Drive
     </a>`;
   }
@@ -121,7 +121,7 @@ async function handleSettingsPage(req, res, { sendHtml }, flash) {
             Stored only on this computer — never sent anywhere except that provider's API.
           </p>
         </div>
-        <button class="bg-[#4f6070] text-white px-4 py-2 rounded text-sm hover:bg-[#3d4c5a]">Save</button>
+        <button class="bg-[#9b1b15] hover:bg-[#7a1611] text-white px-4 py-2 rounded text-sm transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]">Save</button>
       </form>
       ${
         key

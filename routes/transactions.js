@@ -85,7 +85,7 @@ async function renderTransactionForm({ prefill = {}, flash } = {}) {
         )}</textarea>
       </div>
 
-      <button class="bg-[#4f6070] text-white px-4 py-2 rounded text-sm hover:bg-[#3d4c5a]">Save transaction</button>
+      <button class="bg-[#9b1b15] transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] text-white px-4 py-2 rounded text-sm hover:bg-[#7a1611]">Save transaction</button>
     </form>
   `;
 

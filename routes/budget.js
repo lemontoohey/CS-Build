@@ -36,7 +36,7 @@ async function handleBudgetPage(req, res, { sendHtml }, flash) {
               value="${(c.budgeted_cents / 100).toFixed(2)}"
               class="w-28 rounded border border-slate-300 px-2 py-1 text-sm text-right"
             />
-            <button class="text-sm bg-[#4f6070] text-white px-3 py-1 rounded hover:bg-[#3d4c5a]">Save</button>
+            <button class="text-sm bg-[#9b1b15] transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] text-white px-3 py-1 rounded hover:bg-[#7a1611]">Save</button>
           </form>
         </td>
         <td class="py-2 pr-4 text-right">${centsToDisplay(c.actual_cents)}</td>
@@ -71,7 +71,7 @@ async function handleBudgetPage(req, res, { sendHtml }, flash) {
         placeholder="e.g. Skip bins & site waste"
         class="flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
       />
-      <button class="bg-[#4f6070] text-white px-4 py-2 rounded text-sm hover:bg-[#3d4c5a]">Add</button>
+      <button class="bg-[#9b1b15] transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] text-white px-4 py-2 rounded text-sm hover:bg-[#7a1611]">Add</button>
     </form>
   `;
 

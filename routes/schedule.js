@@ -71,7 +71,7 @@ async function handleSchedulePage(req, res, { sendHtml }, flash) {
             class="w-full rounded border border-slate-300 px-2 py-1 text-sm" />
         </div>
         <div class="mt-3">
-          <button class="text-sm bg-[#4f6070] text-white px-3 py-1 rounded hover:bg-[#3d4c5a]">Save</button>
+          <button class="text-sm bg-[#9b1b15] transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] text-white px-3 py-1 rounded hover:bg-[#7a1611]">Save</button>
         </div>
       </form>`;
     })

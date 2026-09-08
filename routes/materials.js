@@ -105,7 +105,7 @@ async function handleMaterialsPage(req, res, { sendHtml }, flash) {
                 class="w-16 rounded border border-slate-300 px-1 py-0.5 text-xs" />
               <input type="date" name="quote_date"
                 class="rounded border border-slate-300 px-1 py-0.5 text-xs" />
-              <button class="text-xs bg-[#4f6070] text-white px-2 py-0.5 rounded">Add</button>
+              <button class="text-xs bg-[#9b1b15] transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] text-white px-2 py-0.5 rounded">Add</button>
             </form>
           </details>
         </td>
@@ -169,7 +169,7 @@ async function handleMaterialsPage(req, res, { sendHtml }, flash) {
         <input type="text" name="note" class="w-full rounded border border-slate-300 px-3 py-2 text-sm" />
       </div>
       <div class="col-span-2">
-        <button class="bg-[#4f6070] text-white px-4 py-2 rounded text-sm hover:bg-[#3d4c5a]">Add item</button>
+        <button class="bg-[#9b1b15] transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] text-white px-4 py-2 rounded text-sm hover:bg-[#7a1611]">Add item</button>
       </div>
     </form>
   `;

@@ -65,7 +65,7 @@ async function handleDiaryPage(req, res, { sendHtml }, flash) {
         <textarea name="issues" rows="2" class="w-full rounded border border-slate-300 px-3 py-2 text-sm"
           placeholder="e.g. Concrete pour delayed a day — truck no-show"></textarea>
       </div>
-      <button class="bg-[#4f6070] text-white px-4 py-2 rounded text-sm hover:bg-[#3d4c5a]">Save entry</button>
+      <button class="bg-[#9b1b15] transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] text-white px-4 py-2 rounded text-sm hover:bg-[#7a1611]">Save entry</button>
     </form>
 
     <h2 class="text-lg font-semibold mb-3">History</h2>

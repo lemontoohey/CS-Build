@@ -41,7 +41,7 @@ function calculatorCard(calc, query, categoryOptions) {
             <select name="category_id" class="text-xs rounded border border-slate-300 px-1 py-1">
               ${categoryOptions}
             </select>
-            <button class="text-xs bg-[#4f6070] text-white px-2 py-1 rounded hover:bg-[#3d4c5a]">Add to materials list</button>
+            <button class="text-xs bg-[#9b1b15] transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] text-white px-2 py-1 rounded hover:bg-[#7a1611]">Add to materials list</button>
           </form>
         </div>`
       : '';
@@ -51,7 +51,7 @@ function calculatorCard(calc, query, categoryOptions) {
     <p class="text-xs text-slate-500 mb-3">${escapeHtml(calc.help)}</p>
     <form method="get" action="/calculators" class="grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
       ${fieldsHtml}
-      <div><button class="text-sm bg-[#4f6070] text-white px-3 py-1.5 rounded hover:bg-[#3d4c5a] w-full">Calculate</button></div>
+      <div><button class="text-sm bg-[#9b1b15] transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] text-white px-3 py-1.5 rounded hover:bg-[#7a1611] w-full">Calculate</button></div>
     </form>
     ${resultHtml}
   </div>`;
