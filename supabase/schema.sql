@@ -165,6 +165,77 @@ insert into schedule_stages (name, sort_order, status) values
   ('Final inspections & occupation certificate', 13, 'not_started')
 on conflict (name) do nothing;
 
+create table if not exists plan_sheets (
+  id bigint generated always as identity primary key,
+  document_id text not null,
+  page_number integer not null default 1,
+  name text,
+  scale_label text,
+  pixels_per_metre double precision,
+  rotation integer not null default 0,
+  created_at text not null
+);
+
+create table if not exists plan_measurements (
+  id bigint generated always as identity primary key,
+  sheet_id bigint not null,
+  kind text not null,
+  label text not null,
+  quantity double precision not null,
+  unit text not null,
+  color text,
+  depth_m double precision,
+  points_json text not null,
+  category_id bigint,
+  boq_item_id bigint,
+  created_at text not null
+);
+
+create table if not exists suppliers (
+  id bigint generated always as identity primary key,
+  key text,
+  name text not null,
+  region text,
+  website text,
+  notes text,
+  sort_order integer not null default 0
+);
+
+create table if not exists price_book_items (
+  id bigint generated always as identity primary key,
+  supplier_id bigint not null,
+  sku text,
+  description text not null,
+  unit text not null,
+  unit_cost_cents bigint not null,
+  category text,
+  notes text,
+  sort_order integer not null default 0
+);
+
+create table if not exists formulate_recipes (
+  id bigint generated always as identity primary key,
+  slug text,
+  name text not null,
+  description text,
+  output_unit text,
+  category text,
+  variables_json text,
+  created_at text not null,
+  sort_order integer not null default 0
+);
+
+create table if not exists formulate_lines (
+  id bigint generated always as identity primary key,
+  recipe_id bigint not null,
+  description text not null,
+  unit text not null,
+  expression text not null,
+  wastage_pct double precision not null default 0,
+  sku_hint text,
+  sort_order integer not null default 0
+);
+
 insert into compliance_items (regime, item, status, sort_order) values
   ('DA / Council', 'Footings inspection booked & passed', 'pending', 0),
   ('DA / Council', 'Slab inspection booked & passed', 'pending', 1),

@@ -1,5 +1,7 @@
 const http = require('node:http');
 const { URL } = require('node:url');
+const fs = require('node:fs');
+const path = require('node:path');
 
 require('./env').loadEnv();
 
@@ -20,8 +22,23 @@ const {
   handleMaterialStatus,
   handleQuoteNew,
 } = require('./routes/materials');
-const { handleSchedulePage, handleScheduleUpdate } = require('./routes/schedule');
+const { handleSchedulePage, handleScheduleUpdate, handleScheduleCascade } = require('./routes/schedule');
 const { handleCalculatorsPage } = require('./routes/calculators');
+const {
+  handlePlanMeasurePage,
+  handlePlanMeasureState,
+  handlePlanMeasureScale,
+  handlePlanMeasureSave,
+  handlePlanMeasureDelete,
+  handlePlanMeasureSend,
+} = require('./routes/plan-measure');
+const { handleFormulatePage, handleFormulateNew, handleFormulateApply } = require('./routes/formulate');
+const {
+  handlePriceBookPage,
+  handlePriceBookItemNew,
+  handlePriceBookApplyOne,
+  handlePriceBookApplyCheapest,
+} = require('./routes/price-book');
 const { handleTradesPage, handleTradeNew } = require('./routes/trades');
 const {
   handleCompliancePage,
@@ -78,8 +95,26 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/calculators') {
       return await handleCalculatorsPage(req, res, helpers, query, flash);
     }
+    if (req.method === 'GET' && pathname === '/plan-measure') {
+      return await handlePlanMeasurePage(req, res, helpers, query, flash);
+    }
+    if (req.method === 'GET' && pathname === '/formulate') {
+      return await handleFormulatePage(req, res, helpers, query, flash);
+    }
+    if (req.method === 'GET' && pathname === '/price-book') {
+      return await handlePriceBookPage(req, res, helpers, query, flash);
+    }
     if (req.method === 'GET' && pathname === '/schedule') {
       return await handleSchedulePage(req, res, helpers, flash);
+    }
+    if (req.method === 'GET' && pathname.startsWith('/public/')) {
+      const name = path.basename(pathname);
+      const file = path.join(__dirname, 'public', name);
+      if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return notFound(res);
+      const types = { '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
+      res.writeHead(200, { 'content-type': types[path.extname(file)] || 'application/octet-stream' });
+      res.end(fs.readFileSync(file));
+      return;
     }
     if (req.method === 'GET' && pathname === '/trades') {
       return await handleTradesPage(req, res, helpers, flash);
@@ -122,6 +157,24 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/schedule/update') {
       return await handleScheduleUpdate(req, res, helpers);
     }
+    if (req.method === 'POST' && pathname === '/schedule/cascade') {
+      return await handleScheduleCascade(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/formulate/new') {
+      return await handleFormulateNew(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/formulate/apply') {
+      return await handleFormulateApply(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/price-book/items/new') {
+      return await handlePriceBookItemNew(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/price-book/apply-one') {
+      return await handlePriceBookApplyOne(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/price-book/apply-cheapest') {
+      return await handlePriceBookApplyCheapest(req, res, helpers);
+    }
     if (req.method === 'POST' && pathname === '/trades/new') {
       return await handleTradeNew(req, res, helpers);
     }
@@ -150,6 +203,21 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && pathname === '/api/documents/upload') {
       return await handleDocumentUploadApi(req, res, helpers);
+    }
+    if (req.method === 'GET' && pathname === '/api/plan-measure/state') {
+      return await handlePlanMeasureState(req, res, helpers, query);
+    }
+    if (req.method === 'POST' && pathname === '/api/plan-measure/scale') {
+      return await handlePlanMeasureScale(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/api/plan-measure/measurements') {
+      return await handlePlanMeasureSave(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/api/plan-measure/measurements/delete') {
+      return await handlePlanMeasureDelete(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/api/plan-measure/send-to-materials') {
+      return await handlePlanMeasureSend(req, res, helpers);
     }
 
     return notFound(res);

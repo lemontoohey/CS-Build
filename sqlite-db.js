@@ -119,6 +119,77 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS plan_sheets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    document_id TEXT NOT NULL,
+    page_number INTEGER NOT NULL DEFAULT 1,
+    name TEXT,
+    scale_label TEXT,
+    pixels_per_metre REAL,
+    rotation INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS plan_measurements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sheet_id INTEGER NOT NULL,
+    kind TEXT NOT NULL,
+    label TEXT NOT NULL,
+    quantity REAL NOT NULL,
+    unit TEXT NOT NULL,
+    color TEXT,
+    depth_m REAL,
+    points_json TEXT NOT NULL,
+    category_id INTEGER,
+    boq_item_id INTEGER,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS suppliers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT,
+    name TEXT NOT NULL,
+    region TEXT,
+    website TEXT,
+    notes TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS price_book_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    supplier_id INTEGER NOT NULL,
+    sku TEXT,
+    description TEXT NOT NULL,
+    unit TEXT NOT NULL,
+    unit_cost_cents INTEGER NOT NULL,
+    category TEXT,
+    notes TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS formulate_recipes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT,
+    name TEXT NOT NULL,
+    description TEXT,
+    output_unit TEXT,
+    category TEXT,
+    variables_json TEXT,
+    created_at TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS formulate_lines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    recipe_id INTEGER NOT NULL,
+    description TEXT NOT NULL,
+    unit TEXT NOT NULL,
+    expression TEXT NOT NULL,
+    wastage_pct REAL NOT NULL DEFAULT 0,
+    sku_hint TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  );
 `);
 
 // Seed the Phase 1 budget categories, drawn from the House Cooper build spec
@@ -234,6 +305,65 @@ function seed() {
       "INSERT INTO compliance_items (regime, item, status, sort_order) VALUES (?, ?, 'pending', ?)"
     );
     DEFAULT_COMPLIANCE.forEach(([regime, item], i) => insertItem.run(regime, item, i));
+  }
+
+  const supplierCount = db.prepare('SELECT COUNT(*) AS n FROM suppliers').get();
+  if (supplierCount.n === 0) {
+    const { buildEstimatingTables } = require('./lib/estimating-seed');
+    const seeded = buildEstimatingTables();
+    const insertSupplier = db.prepare(
+      'INSERT INTO suppliers (id, key, name, region, website, notes, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    );
+    for (const s of seeded.suppliers) {
+      insertSupplier.run(s.id, s.key, s.name, s.region, s.website, s.notes, s.sort_order);
+    }
+    const insertPrice = db.prepare(
+      'INSERT INTO price_book_items (id, supplier_id, sku, description, unit, unit_cost_cents, category, notes, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    for (const p of seeded.price_book_items) {
+      insertPrice.run(
+        p.id,
+        p.supplier_id,
+        p.sku,
+        p.description,
+        p.unit,
+        p.unit_cost_cents,
+        p.category,
+        p.notes,
+        p.sort_order
+      );
+    }
+    const insertRecipe = db.prepare(
+      'INSERT INTO formulate_recipes (id, slug, name, description, output_unit, category, variables_json, created_at, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    for (const r of seeded.formulate_recipes) {
+      insertRecipe.run(
+        r.id,
+        r.slug,
+        r.name,
+        r.description,
+        r.output_unit,
+        r.category,
+        r.variables_json,
+        r.created_at,
+        r.sort_order
+      );
+    }
+    const insertLine = db.prepare(
+      'INSERT INTO formulate_lines (id, recipe_id, description, unit, expression, wastage_pct, sku_hint, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    for (const l of seeded.formulate_lines) {
+      insertLine.run(
+        l.id,
+        l.recipe_id,
+        l.description,
+        l.unit,
+        l.expression,
+        l.wastage_pct,
+        l.sku_hint,
+        l.sort_order
+      );
+    }
   }
 }
 
