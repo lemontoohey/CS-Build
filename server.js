@@ -27,14 +27,24 @@ const {
   handleComplianceToggle,
   handleComplianceNew,
 } = require('./routes/compliance');
-const { handleSettingsPage, handleSettingsAiUpdate } = require('./routes/settings');
+const {
+  handleSettingsPage,
+  handleSettingsAiUpdate,
+  handleSettingsBackendLocal,
+  handleSettingsBackendSupabase,
+  handleSettingsBackendGoogleDrive,
+  handleGoogleOauthStart,
+  handleGoogleOauthCallback,
+  handleGoogleDisconnect,
+} = require('./routes/settings');
 
 const PORT = Number(process.env.PORT) || 3000;
 
 const server = http.createServer(async (req, res) => {
+  let pathname = '';
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
-    const pathname = url.pathname;
+    pathname = url.pathname;
     const query = Object.fromEntries(url.searchParams.entries());
     const flash = query.flash;
     const helpers = { sendHtml, sendJson, readJsonBody };
@@ -77,6 +87,12 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/settings') {
       return await handleSettingsPage(req, res, helpers, flash);
     }
+    if (req.method === 'GET' && pathname === '/oauth/google/start') {
+      return await handleGoogleOauthStart(req, res, helpers);
+    }
+    if (req.method === 'GET' && pathname === '/oauth/google/callback') {
+      return await handleGoogleOauthCallback(req, res, helpers, query);
+    }
 
     // --- POST routes (HTML forms) ---
     if (req.method === 'POST' && pathname === '/budget/update') {
@@ -115,6 +131,18 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/settings/ai') {
       return await handleSettingsAiUpdate(req, res, helpers);
     }
+    if (req.method === 'POST' && pathname === '/settings/backend/local') {
+      return await handleSettingsBackendLocal(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/settings/backend/supabase') {
+      return await handleSettingsBackendSupabase(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/settings/backend/google_drive') {
+      return await handleSettingsBackendGoogleDrive(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/settings/google/disconnect') {
+      return await handleGoogleDisconnect(req, res, helpers);
+    }
 
     // --- POST routes (JSON APIs, used by client-side JS for file upload) ---
     if (req.method === 'POST' && pathname === '/api/receipts/parse') {
@@ -127,8 +155,18 @@ const server = http.createServer(async (req, res) => {
     return notFound(res);
   } catch (err) {
     console.error(err);
-    res.writeHead(500, { 'content-type': 'text/plain' });
-    res.end('Something went wrong: ' + err.message);
+    // A handful of store-layer errors are things a non-technical person can
+    // actually act on from the Settings page (Google Drive not connected
+    // yet, a bad Supabase key) — send them there with a plain-English flash
+    // instead of a raw stack-trace-flavoured error page.
+    const actionable = /Google Drive|Google sign-in|Supabase (REST )?error/.test(err.message);
+    if (actionable && pathname !== '/settings' && !res.headersSent) {
+      return redirect(res, '/settings?flash=' + encodeURIComponent(err.message));
+    }
+    if (!res.headersSent) {
+      res.writeHead(500, { 'content-type': 'text/plain' });
+      res.end('Something went wrong: ' + err.message);
+    }
   }
 });
 

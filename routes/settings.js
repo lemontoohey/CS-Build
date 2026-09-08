@@ -2,26 +2,134 @@ const { layout } = require('../lib/layout');
 const { escapeHtml } = require('../lib/render');
 const { readFormBody, redirect } = require('../lib/http');
 const { getAiConfig, saveAiConfig, PROVIDERS } = require('../lib/ai');
-const { store } = require('../lib/store');
+const { getBackendConfig, saveBackendConfig } = require('../lib/config');
+const googleAuth = require('../lib/google-auth');
 
 const PROVIDER_LABELS = { anthropic: 'Anthropic (Claude)', openai: 'OpenAI (GPT)' };
 
+function backendCard({ id, emoji, title, description, isActive, bodyHtml }) {
+  return `<div class="rounded-lg border-2 ${
+    isActive ? 'border-slate-800' : 'border-slate-200'
+  } bg-white p-5 mb-4">
+    <div class="flex items-start gap-3">
+      <span class="text-2xl leading-none">${emoji}</span>
+      <div class="flex-1">
+        <div class="flex items-center gap-2">
+          <h3 class="font-semibold text-lg">${escapeHtml(title)}</h3>
+          ${isActive ? '<span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-white">In use now</span>' : ''}
+        </div>
+        <p class="text-sm text-slate-600 mt-0.5 mb-3">${description}</p>
+        <div id="${id}">${bodyHtml}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
 async function handleSettingsPage(req, res, { sendHtml }, flash) {
+  const cfg = getBackendConfig();
   const { provider, key } = await getAiConfig();
   const maskedKey = key ? `•••• ${key.slice(-4)}` : null;
+  const googleConnected = googleAuth.isConnected();
+  const googleReady = googleAuth.isGoogleClientConfigured();
 
   const providerOptions = PROVIDERS.map(
     (p) => `<option value="${p}" ${p === provider ? 'selected' : ''}>${PROVIDER_LABELS[p]}</option>`
   ).join('');
 
+  // --- "Where is your data stored?" — three plain-language options -------
+  const localCard = backendCard({
+    id: 'card-local',
+    emoji: '💻',
+    title: 'This computer only',
+    description: 'No setup needed. Your data stays in a file on this computer — nothing to connect.',
+    isActive: cfg.backend === 'sqlite',
+    bodyHtml:
+      cfg.backend === 'sqlite'
+        ? ''
+        : `<form method="post" action="/settings/backend/local">
+             <button class="text-sm bg-slate-800 text-white px-3 py-1.5 rounded hover:bg-slate-700">
+               Switch to this computer only
+             </button>
+           </form>`,
+  });
+
+  let driveBody;
+  if (!googleReady) {
+    driveBody = `<p class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+      Not set up yet — whoever installed this app needs to finish the one-time Google setup in the README before this option can be used.
+    </p>`;
+  } else if (googleConnected) {
+    driveBody = `<div class="flex items-center gap-3 flex-wrap">
+      <span class="text-sm text-emerald-700">✓ Your Google account is connected.</span>
+      ${
+        cfg.backend !== 'google_drive'
+          ? `<form method="post" action="/settings/backend/google_drive">
+               <button class="text-sm bg-slate-800 text-white px-3 py-1.5 rounded hover:bg-slate-700">Use Google Drive</button>
+             </form>`
+          : ''
+      }
+      <form method="post" action="/settings/google/disconnect">
+        <button class="text-sm text-red-700 hover:underline">Disconnect</button>
+      </form>
+    </div>`;
+  } else {
+    driveBody = `<a href="/oauth/google/start"
+      class="inline-block text-sm bg-slate-800 text-white px-3 py-1.5 rounded hover:bg-slate-700">
+      Connect Google Drive
+    </a>`;
+  }
+  const driveCard = backendCard({
+    id: 'card-drive',
+    emoji: '☁️',
+    title: 'Google Drive',
+    description:
+      'The easy cloud option. Click connect, sign in with the Google account you already have, and your data backs up there automatically. This app can only see the one file it creates — nothing else in your Drive.',
+    isActive: cfg.backend === 'google_drive',
+    bodyHtml: driveBody,
+  });
+
+  const supabaseCard = backendCard({
+    id: 'card-supabase',
+    emoji: '🗄️',
+    title: 'Supabase (advanced)',
+    description:
+      "For technical users who already have a Supabase project. You'll need its project URL and API key.",
+    isActive: cfg.backend === 'supabase',
+    bodyHtml: `<form method="post" action="/settings/backend/supabase" class="space-y-2 max-w-md">
+      <div>
+        <label class="block text-xs text-slate-500 mb-1">Project URL</label>
+        <input type="text" name="supabase_url" value="${escapeHtml(cfg.supabase_url || '')}"
+          placeholder="https://xxxxxxxx.supabase.co"
+          class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 mb-1">API key</label>
+        <input type="password" name="supabase_key" value="${escapeHtml(cfg.supabase_key || '')}"
+          placeholder="anon / publishable key"
+          class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" />
+      </div>
+      <button class="text-sm bg-slate-800 text-white px-3 py-1.5 rounded hover:bg-slate-700">
+        Save & use Supabase
+      </button>
+    </form>`,
+  });
+
   const body = `
     <h1 class="text-2xl font-bold mb-2">Settings</h1>
-    <p class="text-sm text-slate-600 mb-6">
-      This tool doesn't come tied to any one AI account. Pick whichever provider you already use, paste in your own API key, and receipt parsing turns on immediately.
-    </p>
 
+    <h2 class="text-lg font-semibold mt-6 mb-1">Where is your data stored?</h2>
+    <p class="text-sm text-slate-600 mb-4">
+      Pick one. You can change your mind later — switching here never deletes anything.
+    </p>
+    ${localCard}
+    ${driveCard}
+    ${supabaseCard}
+
+    <h2 class="text-lg font-semibold mt-10 mb-1">AI receipt reading</h2>
+    <p class="text-sm text-slate-600 mb-4">
+      Optional. Pick whichever AI provider you already use and paste in your own API key, and receipt parsing turns on immediately.
+    </p>
     <div class="bg-white rounded-lg border border-slate-200 p-6 max-w-lg">
-      <h2 class="font-semibold mb-4">AI provider</h2>
       <form method="post" action="/settings/ai" class="space-y-4">
         <div>
           <label class="block text-sm font-medium mb-1">Provider</label>
@@ -37,7 +145,7 @@ async function handleSettingsPage(req, res, { sendHtml }, flash) {
             class="w-full rounded border border-slate-300 px-3 py-2 text-sm" />
           <p class="text-xs text-slate-500 mt-1">
             Anthropic keys come from console.anthropic.com. OpenAI keys come from platform.openai.com.
-            Stored in this tool's own database — never sent anywhere except that provider's API.
+            Stored only on this computer — never sent anywhere except that provider's API.
           </p>
         </div>
         <button class="bg-slate-800 text-white px-4 py-2 rounded text-sm hover:bg-slate-700">Save</button>
@@ -48,16 +156,6 @@ async function handleSettingsPage(req, res, { sendHtml }, flash) {
               PROVIDER_LABELS[provider]
             )}, key ending ${escapeHtml(key.slice(-4))}).</div>`
           : `<div class="mt-4 text-sm text-amber-700">AI receipt parsing is off until a key is added.</div>`
-      }
-    </div>
-
-    <h2 class="text-lg font-semibold mt-8 mb-3">Data backend</h2>
-    <div class="bg-white rounded-lg border border-slate-200 p-4 max-w-lg text-sm text-slate-700">
-      Currently using: <strong>${store.backend === 'supabase' ? 'Supabase (cloud)' : 'Local SQLite'}</strong>.
-      ${
-        store.backend === 'supabase'
-          ? 'Data lives in your Supabase project, so it stays in sync from any machine that runs this app.'
-          : "Data lives in this machine's data/app.db file only. Set SUPABASE_URL and SUPABASE_KEY in .env to switch to Supabase."
       }
     </div>
   `;
@@ -71,4 +169,80 @@ async function handleSettingsAiUpdate(req, res) {
   redirect(res, '/settings?flash=' + encodeURIComponent('Settings saved.'));
 }
 
-module.exports = { handleSettingsPage, handleSettingsAiUpdate };
+async function handleSettingsBackendLocal(req, res) {
+  saveBackendConfig({ backend: 'sqlite' });
+  redirect(res, '/settings?flash=' + encodeURIComponent('Now using this computer only.'));
+}
+
+async function handleSettingsBackendSupabase(req, res) {
+  const form = await readFormBody(req);
+  const supabaseUrl = (form.supabase_url || '').trim();
+  const supabaseKey = (form.supabase_key || '').trim();
+  if (!supabaseUrl || !supabaseKey) {
+    return redirect(
+      res,
+      '/settings?flash=' + encodeURIComponent('Add both the project URL and the API key before saving.')
+    );
+  }
+  saveBackendConfig({ backend: 'supabase', supabase_url: supabaseUrl, supabase_key: supabaseKey });
+  redirect(res, '/settings?flash=' + encodeURIComponent('Now using Supabase.'));
+}
+
+async function handleSettingsBackendGoogleDrive(req, res) {
+  if (!googleAuth.isConnected()) {
+    return redirect(
+      res,
+      '/settings?flash=' + encodeURIComponent('Connect Google Drive first, then switch to it.')
+    );
+  }
+  saveBackendConfig({ backend: 'google_drive' });
+  redirect(res, '/settings?flash=' + encodeURIComponent('Now using Google Drive.'));
+}
+
+async function handleGoogleOauthStart(req, res) {
+  if (!googleAuth.isGoogleClientConfigured()) {
+    return redirect(
+      res,
+      '/settings?flash=' + encodeURIComponent('Google Drive is not set up on this install yet — see the README.')
+    );
+  }
+  redirect(res, googleAuth.buildAuthUrl());
+}
+
+async function handleGoogleOauthCallback(req, res, { sendHtml }, query) {
+  if (query.error) {
+    return redirect(res, '/settings?flash=' + encodeURIComponent('Google sign-in was cancelled.'));
+  }
+  if (!query.code) {
+    return redirect(res, '/settings?flash=' + encodeURIComponent('Google sign-in did not return a code.'));
+  }
+  try {
+    await googleAuth.exchangeCodeForTokens(query.code);
+    // Connecting is the whole point of clicking the button — switch to it
+    // right away instead of making someone find a second "use it" button.
+    saveBackendConfig({ backend: 'google_drive' });
+    redirect(res, '/settings?flash=' + encodeURIComponent('Google Drive connected — now using it for your data.'));
+  } catch (err) {
+    redirect(res, '/settings?flash=' + encodeURIComponent('Google sign-in failed: ' + err.message));
+  }
+}
+
+async function handleGoogleDisconnect(req, res) {
+  googleAuth.disconnect();
+  const cfg = getBackendConfig();
+  if (cfg.backend === 'google_drive') {
+    saveBackendConfig({ backend: 'sqlite' });
+  }
+  redirect(res, '/settings?flash=' + encodeURIComponent('Google Drive disconnected.'));
+}
+
+module.exports = {
+  handleSettingsPage,
+  handleSettingsAiUpdate,
+  handleSettingsBackendLocal,
+  handleSettingsBackendSupabase,
+  handleSettingsBackendGoogleDrive,
+  handleGoogleOauthStart,
+  handleGoogleOauthCallback,
+  handleGoogleDisconnect,
+};

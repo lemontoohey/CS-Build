@@ -1,6 +1,6 @@
-# House Cooper Build Tool — Phase 1 + Phase 2
+# House Cooper Build Tool
 
-An owner-build tracker for the House Cooper project (253 Coopers Shoot Road), built from `house-cooper-build-tool-spec.md`. Phase 1 (budget ledger, AI receipt parsing, documents vault, site diary) and Phase 2 (materials/BOQ, schedule, trades directory, compliance checklists) are both built.
+An owner-build tracker for the House Cooper project (253 Coopers Shoot Road), built from `house-cooper-build-tool-spec.md`. Phase 1 (budget ledger, AI receipt parsing, documents vault, site diary), Phase 2 (materials/BOQ, schedule, trades directory, compliance checklists), and Phase 3 (choice of where data lives, and AI/provider settings that don't require editing files) are all built.
 
 ## Why this has zero npm dependencies
 
@@ -31,9 +31,9 @@ node --watch server.js
 
 ## Turning on AI receipt parsing
 
-1. Copy `.env.example` to `.env`.
-2. Get an API key at https://console.anthropic.com and set `ANTHROPIC_API_KEY=...` in `.env`.
-3. Restart the server.
+Easiest way: open the app, go to **Settings**, pick a provider (Anthropic or OpenAI), and paste in your own API key. It works immediately — no restart, no file editing.
+
+(You can also set `ANTHROPIC_API_KEY`/`OPENAI_API_KEY` in `.env` instead if you prefer — see `.env.example` — but the Settings page is simpler for most people.)
 
 Without a key, the "Add receipt" screen still files the upload into the documents vault — you just fill in the transaction details yourself instead of having them read automatically.
 
@@ -41,12 +41,27 @@ Without a key, the "Add receipt" screen still files the upload into the document
 
 ## Where your data lives
 
-Everything is stored locally in `data/`:
+Go to **Settings** in the app to choose. There are three options, and you can switch between them at any point without losing anything:
 
-- `data/app.db` — the SQLite database (budget, transactions, diary entries, document metadata).
-- `data/documents/` — the actual uploaded files (receipts, DA approvals, contracts, etc.).
+- **This computer only** — the default. No setup. Everything lives in a file on this computer (`data/app.db`). Nothing to connect, nothing that can leak, but it doesn't back up anywhere by itself.
+- **Google Drive** — click "Connect Google Drive," sign in with your own Google account, done. Your data is saved as one file in your own Drive. This app can only ever see that one file — nothing else in your Drive. The trade-off: if you open the app on two computers at the same time, the second one to save wins (there's no merge) — fine for one person editing from one place at a time, not built for simultaneous multi-device editing.
+- **Supabase (advanced)** — a real shared Postgres database, for anyone comfortable creating a Supabase project. See `supabase/schema.sql`.
 
-This whole folder is gitignored. **Back it up** — copy `data/` somewhere safe periodically (Time Machine, a synced folder, whatever you already use). There's no cloud sync in Phase 1.
+Whichever you pick, uploaded files (receipts, DA approvals, contracts, etc.) always stay in `data/documents/` on whichever computer you uploaded them from — that part isn't affected by this choice yet.
+
+`data/` is gitignored regardless of backend. If you're using "This computer only," **back it up yourself** — copy `data/` somewhere safe periodically (Time Machine, a synced folder, whatever you already use).
+
+### Turning on the Google Drive option
+
+The "Connect Google Drive" button only appears once whoever's running this app (that's you, not your friend) has done this once, in a free Google Cloud account:
+
+1. Go to https://console.cloud.google.com, create a project (any name).
+2. **APIs & Services → Enabled APIs** → enable the "Google Drive API".
+3. **APIs & Services → OAuth consent screen** → choose "External," fill in an app name and your email, and add yourself as a test user (this keeps it out of Google's review process — fine for a personal tool).
+4. **APIs & Services → Credentials → Create Credentials → OAuth client ID** → application type "Web application" → under "Authorized redirect URIs" add `http://localhost:3000/oauth/google/callback`.
+5. Copy the Client ID and Client Secret it gives you into `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, then restart the server once.
+
+After that one-time setup, anyone using the app (including your friend) just clicks "Connect Google Drive" and signs in — no keys, no console, no technical steps on their end.
 
 ## What's here vs. what's next
 
@@ -60,11 +75,12 @@ Built now:
 - **Trades & suppliers directory** — contact details, licence numbers, and insurance expiry, auto-flagged amber inside 30 days and red once lapsed. Trades with insurance issues also surface as a warning banner on the dashboard.
 - **Compliance checklist** — seeded from what's actually on this plan set (the BASIX Commitments table, DA conditions including the REV B wall moves, the bushfire water/BAL requirement, the pool safety certificate, and AWTS septic commissioning), not a generic template. Click to check off; add your own items under any regime.
 - Dashboard now also shows the next unstarted schedule stage and a count of outstanding compliance items.
+- **Settings page** — pick your AI provider and paste in your own API key (not tied to any one account); choose where your data lives (this computer, your own Google Drive, or Supabase) and switch between them without losing anything, all without editing a single file.
 
-Not built yet (see `house-cooper-build-tool-spec.md` for the full plan — this is Phase 3):
+Not built yet (see `house-cooper-build-tool-spec.md` for the full plan):
 - AI materials takeoff from the plan set (draft quantities read straight off the drawings).
 - Voice diary entries and natural-language budget/schedule Q&A.
-- Hosting this somewhere other than your own machine (so it works from a phone on site without your laptop running) — likely a move to Postgres/Supabase at that point.
+- Uploaded documents/receipts moving with you to Google Drive/Supabase too — right now those still stay on whichever computer uploaded them, only the budget/schedule/etc. data follows your backend choice.
 
 ## Troubleshooting: "disk I/O error" from SQLite
 
