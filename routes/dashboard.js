@@ -2,15 +2,17 @@ const { store } = require('../lib/store');
 const { layout } = require('../lib/layout');
 const { escapeHtml, centsToDisplay, todayIso } = require('../lib/render');
 const { daysBetween } = require('./trades');
+const { buildInsights } = require('../lib/insights');
 
 async function handleDashboard(req, res, { sendHtml }) {
-  const [rawCategories, transactions, diaryEntries, stages, complianceItems, trades] = await Promise.all([
+  const [rawCategories, transactions, diaryEntries, stages, complianceItems, trades, boqItems] = await Promise.all([
     store.listAll('budget_categories', { orderBy: 'sort_order' }),
     store.listAll('transactions'),
     store.listAll('diary_entries'),
     store.listAll('schedule_stages', { orderBy: 'sort_order' }),
     store.listAll('compliance_items'),
     store.listAll('trades'),
+    store.listAll('boq_items'),
   ]);
 
   const actualByCategory = {};
@@ -53,6 +55,8 @@ async function handleDashboard(req, res, { sendHtml }) {
   const insuranceAlerts = trades.filter(
     (t) => t.insurance_expiry && daysBetween(today, t.insurance_expiry) <= 30
   );
+
+  const insights = buildInsights({ categories, transactions, stages: sortedStages, complianceItems, boqItems });
 
   const alerts = [];
   if (overdueStages.length) {
@@ -143,6 +147,21 @@ async function handleDashboard(req, res, { sendHtml }) {
         <div class="text-xs uppercase text-slate-500">Compliance outstanding</div>
         <div class="text-lg font-semibold">${pendingCompliance} item${pendingCompliance === 1 ? '' : 's'}</div>
       </a>
+    </div>
+
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-lg font-semibold">Quick answers</h2>
+      <span class="text-xs text-slate-400">Computed from your data — no AI needed</span>
+    </div>
+    <div class="bg-white rounded-lg border border-slate-200 p-4 mb-8 divide-y divide-slate-100">
+      ${insights
+        .map(
+          (i) => `<div class="py-2 flex items-baseline justify-between gap-4 text-sm">
+            <span class="text-slate-500">${escapeHtml(i.label)}</span>
+            <span class="text-right font-medium">${escapeHtml(i.value)}</span>
+          </div>`
+        )
+        .join('\n')}
     </div>
 
     <div class="flex items-center justify-between mb-3">

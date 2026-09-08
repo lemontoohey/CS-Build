@@ -21,6 +21,7 @@ const {
   handleQuoteNew,
 } = require('./routes/materials');
 const { handleSchedulePage, handleScheduleUpdate } = require('./routes/schedule');
+const { handleCalculatorsPage } = require('./routes/calculators');
 const { handleTradesPage, handleTradeNew } = require('./routes/trades');
 const {
   handleCompliancePage,
@@ -74,6 +75,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && pathname === '/materials') {
       return await handleMaterialsPage(req, res, helpers, flash);
+    }
+    if (req.method === 'GET' && pathname === '/calculators') {
+      return await handleCalculatorsPage(req, res, helpers, query, flash);
     }
     if (req.method === 'GET' && pathname === '/schedule') {
       return await handleSchedulePage(req, res, helpers, flash);

@@ -76,10 +76,14 @@ Built now:
 - **Compliance checklist** — seeded from what's actually on this plan set (the BASIX Commitments table, DA conditions including the REV B wall moves, the bushfire water/BAL requirement, the pool safety certificate, and AWTS septic commissioning), not a generic template. Click to check off; add your own items under any regime.
 - Dashboard now also shows the next unstarted schedule stage and a count of outstanding compliance items.
 - **Settings page** — pick your AI provider and paste in your own API key (not tied to any one account); choose where your data lives (this computer, your own Google Drive, or Supabase) and switch between them without losing anything, all without editing a single file.
+- **Works fully with no AI key at all.** Nothing in this app requires AI — it's an optional convenience for reading receipts, not a dependency:
+  - **Materials calculators** — plasterboard/cladding sheets, roof sheeting, tiles, paint, concrete volume, and timber studs/fence post counts, from plain measurements (no AI plan-reading needed). Each gives a one-click "add to materials list" so a result becomes a real BOQ line straight away.
+  - **Quick answers** on the dashboard — total spent, categories over budget, biggest spend category, build progress, compliance remaining, materials not yet ordered — the handful of things people actually ask about a budget/schedule, computed directly from your data instead of asked to an AI.
+  - Receipts without AI just get filed in the documents vault for you to enter manually — always been true, still true.
 
 Not built yet (see `house-cooper-build-tool-spec.md` for the full plan):
-- AI materials takeoff from the plan set (draft quantities read straight off the drawings).
-- Voice diary entries and natural-language budget/schedule Q&A.
+- AI materials takeoff read straight off the plan drawings (the calculators above cover the "I know the measurements, what do I need" case; reading quantities off a PDF plan set is a different, AI-only capability, not yet built).
+- Voice diary entries.
 - Uploaded documents/receipts moving with you to Google Drive/Supabase too — right now those still stay on whichever computer uploaded them, only the budget/schedule/etc. data follows your backend choice.
 
 ## Troubleshooting: "disk I/O error" from SQLite
