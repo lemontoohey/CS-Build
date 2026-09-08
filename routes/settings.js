@@ -88,32 +88,6 @@ async function handleSettingsPage(req, res, { sendHtml }, flash) {
     bodyHtml: driveBody,
   });
 
-  const supabaseCard = backendCard({
-    id: 'card-supabase',
-    emoji: '🗄️',
-    title: 'Supabase (advanced)',
-    description:
-      "For technical users who already have a Supabase project. You'll need its project URL and API key.",
-    isActive: cfg.backend === 'supabase',
-    bodyHtml: `<form method="post" action="/settings/backend/supabase" class="space-y-2 max-w-md">
-      <div>
-        <label class="block text-xs text-slate-500 mb-1">Project URL</label>
-        <input type="text" name="supabase_url" value="${escapeHtml(cfg.supabase_url || '')}"
-          placeholder="https://xxxxxxxx.supabase.co"
-          class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" />
-      </div>
-      <div>
-        <label class="block text-xs text-slate-500 mb-1">API key</label>
-        <input type="password" name="supabase_key" value="${escapeHtml(cfg.supabase_key || '')}"
-          placeholder="anon / publishable key"
-          class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm" />
-      </div>
-      <button class="text-sm bg-slate-800 text-white px-3 py-1.5 rounded hover:bg-slate-700">
-        Save & use Supabase
-      </button>
-    </form>`,
-  });
-
   const body = `
     <h1 class="text-2xl font-bold mb-2">Settings</h1>
 
@@ -123,7 +97,6 @@ async function handleSettingsPage(req, res, { sendHtml }, flash) {
     </p>
     ${localCard}
     ${driveCard}
-    ${supabaseCard}
 
     <h2 class="text-lg font-semibold mt-10 mb-1">AI receipt reading</h2>
     <p class="text-sm text-slate-600 mb-4">
@@ -172,20 +145,6 @@ async function handleSettingsAiUpdate(req, res) {
 async function handleSettingsBackendLocal(req, res) {
   saveBackendConfig({ backend: 'sqlite' });
   redirect(res, '/settings?flash=' + encodeURIComponent('Now using this computer only.'));
-}
-
-async function handleSettingsBackendSupabase(req, res) {
-  const form = await readFormBody(req);
-  const supabaseUrl = (form.supabase_url || '').trim();
-  const supabaseKey = (form.supabase_key || '').trim();
-  if (!supabaseUrl || !supabaseKey) {
-    return redirect(
-      res,
-      '/settings?flash=' + encodeURIComponent('Add both the project URL and the API key before saving.')
-    );
-  }
-  saveBackendConfig({ backend: 'supabase', supabase_url: supabaseUrl, supabase_key: supabaseKey });
-  redirect(res, '/settings?flash=' + encodeURIComponent('Now using Supabase.'));
 }
 
 async function handleSettingsBackendGoogleDrive(req, res) {
@@ -240,7 +199,6 @@ module.exports = {
   handleSettingsPage,
   handleSettingsAiUpdate,
   handleSettingsBackendLocal,
-  handleSettingsBackendSupabase,
   handleSettingsBackendGoogleDrive,
   handleGoogleOauthStart,
   handleGoogleOauthCallback,

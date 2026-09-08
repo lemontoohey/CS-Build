@@ -32,7 +32,6 @@ const {
   handleSettingsPage,
   handleSettingsAiUpdate,
   handleSettingsBackendLocal,
-  handleSettingsBackendSupabase,
   handleSettingsBackendGoogleDrive,
   handleGoogleOauthStart,
   handleGoogleOauthCallback,
@@ -137,9 +136,6 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && pathname === '/settings/backend/local') {
       return await handleSettingsBackendLocal(req, res, helpers);
-    }
-    if (req.method === 'POST' && pathname === '/settings/backend/supabase') {
-      return await handleSettingsBackendSupabase(req, res, helpers);
     }
     if (req.method === 'POST' && pathname === '/settings/backend/google_drive') {
       return await handleSettingsBackendGoogleDrive(req, res, helpers);

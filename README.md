@@ -41,11 +41,12 @@ Without a key, the "Add receipt" screen still files the upload into the document
 
 ## Where your data lives
 
-Go to **Settings** in the app to choose. There are three options, and you can switch between them at any point without losing anything:
+Go to **Settings** in the app to choose. There are two options, and you can switch between them at any point without losing anything:
 
-- **This computer only** — the default. No setup. Everything lives in a file on this computer (`data/app.db`). Nothing to connect, nothing that can leak, but it doesn't back up anywhere by itself.
+- **This computer only** — the default. No setup. Everything lives in a file on this computer (`data/app.db`). Nothing to connect, nothing that can leak, but it doesn't back up anywhere by itself. This is also what you're using while testing the app before deciding on anything else.
 - **Google Drive** — click "Connect Google Drive," sign in with your own Google account, done. Your data is saved as one file in your own Drive. This app can only ever see that one file — nothing else in your Drive. The trade-off: if you open the app on two computers at the same time, the second one to save wins (there's no merge) — fine for one person editing from one place at a time, not built for simultaneous multi-device editing.
-- **Supabase (advanced)** — a real shared Postgres database, for anyone comfortable creating a Supabase project. See `supabase/schema.sql`.
+
+(A Supabase/Postgres backend is also built in — `supabase/schema.sql` and the `store` code both still work — but it isn't shown as an option on the Settings page, to keep the choice simple for whoever's actually using the app day to day. If you ever want it back, it's a couple of lines in `routes/settings.js`.)
 
 Whichever you pick, uploaded files (receipts, DA approvals, contracts, etc.) always stay in `data/documents/` on whichever computer you uploaded them from — that part isn't affected by this choice yet.
 
