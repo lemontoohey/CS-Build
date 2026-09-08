@@ -1,0 +1,15 @@
+{
+  "name": "house-cooper-build-tool",
+  "version": "0.1.0",
+  "description": "Owner-build tracker for the House Cooper project — budget, receipts, documents, and site diary, with optional AI-assisted receipt parsing.",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {}
+}

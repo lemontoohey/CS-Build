@@ -1,0 +1,200 @@
+-- House Cooper Build Tool — Supabase/Postgres schema.
+--
+-- Run this once in the Supabase SQL Editor (Project → SQL Editor → New query)
+-- for project ozlyfflgmxdkerkrubvh. It mirrors the local SQLite schema
+-- (sqlite-db.js) exactly, column for column, so the app's REST-based store
+-- (lib/store.js) works identically against either backend.
+--
+-- Dates/timestamps are stored as TEXT (ISO strings), matching the app's
+-- existing convention — this keeps formatting logic identical between the
+-- SQLite and Supabase backends rather than diverging on date types.
+--
+-- Row Level Security is left OFF. This is a private, single-household tool,
+-- not a public multi-tenant app — if you ever expose this server to the
+-- public internet, add auth and RLS policies before doing so.
+
+create table if not exists budget_categories (
+  id bigint generated always as identity primary key,
+  name text not null unique,
+  budgeted_cents bigint not null default 0,
+  sort_order integer not null default 0
+);
+
+create table if not exists documents (
+  id text primary key,
+  filename text not null,
+  mime_type text,
+  category text not null default 'Other',
+  file_path text not null,
+  uploaded_at text not null
+);
+
+create table if not exists transactions (
+  id bigint generated always as identity primary key,
+  category_id bigint not null references budget_categories(id),
+  txn_date text not null,
+  supplier text,
+  description text,
+  amount_cents bigint not null,
+  gst_cents bigint not null default 0,
+  document_id text references documents(id),
+  note text,
+  ai_generated boolean not null default false,
+  created_at text not null
+);
+
+create table if not exists diary_entries (
+  id bigint generated always as identity primary key,
+  entry_date text not null,
+  weather text,
+  trades_present text,
+  work_done text,
+  issues text,
+  created_at text not null
+);
+
+create table if not exists boq_items (
+  id bigint generated always as identity primary key,
+  category_id bigint not null references budget_categories(id),
+  description text not null,
+  quantity double precision,
+  unit text,
+  unit_cost_cents bigint,
+  supplier text,
+  status text not null default 'not_ordered',
+  note text,
+  created_at text not null
+);
+
+create table if not exists quotes (
+  id bigint generated always as identity primary key,
+  boq_item_id bigint not null references boq_items(id),
+  supplier text not null,
+  price_cents bigint not null,
+  quote_date text,
+  note text,
+  created_at text not null
+);
+
+create table if not exists trades (
+  id bigint generated always as identity primary key,
+  name text not null,
+  trade_type text,
+  phone text,
+  email text,
+  licence_number text,
+  insurance_expiry text,
+  scope_notes text,
+  created_at text not null
+);
+
+create table if not exists schedule_stages (
+  id bigint generated always as identity primary key,
+  name text not null unique,
+  sort_order integer not null default 0,
+  planned_start text,
+  planned_end text,
+  actual_start text,
+  actual_end text,
+  status text not null default 'not_started',
+  notes text
+);
+
+create table if not exists compliance_items (
+  id bigint generated always as identity primary key,
+  regime text not null,
+  item text not null,
+  status text not null default 'pending',
+  due_date text,
+  document_id text references documents(id),
+  notes text,
+  sort_order integer not null default 0,
+  unique (regime, item)
+);
+
+create table if not exists settings (
+  key text primary key,
+  value text
+);
+
+-- Seed data — identical to sqlite-db.js's DEFAULT_CATEGORIES / DEFAULT_STAGES
+-- / DEFAULT_COMPLIANCE, drawn from the actual House Cooper plan set. Uses
+-- "on conflict do nothing" so this is safe to re-run.
+
+insert into budget_categories (name, budgeted_cents, sort_order) values
+  ('Site establishment & earthworks', 0, 0),
+  ('Retaining & cut-fill', 0, 1),
+  ('Septic/AWTS system & ETA beds', 0, 2),
+  ('Water tanks (drinking, BASIX, bushfire)', 0, 3),
+  ('Footings & slab', 0, 4),
+  ('Structural frame (steel & timber)', 0, 5),
+  ('Roofing (Colorbond) & solar', 0, 6),
+  ('External cladding & stonework', 0, 7),
+  ('Windows & doors', 0, 8),
+  ('Waterproofing', 0, 9),
+  ('Plumbing rough-in & fixout', 0, 10),
+  ('Electrical rough-in & fixout', 0, 11),
+  ('Insulation', 0, 12),
+  ('Plasterboard & internal linings', 0, 13),
+  ('Painting', 0, 14),
+  ('Kitchen & joinery', 0, 15),
+  ('Flooring & tiling', 0, 16),
+  ('Bathroom fixtures', 0, 17),
+  ('Pool & fencing', 0, 18),
+  ('Driveway & external works', 0, 19),
+  ('Landscaping', 0, 20),
+  ('Fencing (property & pool safety)', 0, 21),
+  ('Council/certifier fees', 0, 22),
+  ('Contingency', 0, 23)
+on conflict (name) do nothing;
+
+insert into schedule_stages (name, sort_order, status) values
+  ('Site establishment', 0, 'not_started'),
+  ('Earthworks & retaining', 1, 'not_started'),
+  ('Footings', 2, 'not_started'),
+  ('Slab', 3, 'not_started'),
+  ('Structural frame', 4, 'not_started'),
+  ('Roof', 5, 'not_started'),
+  ('Lock-up (windows & doors)', 6, 'not_started'),
+  ('Rough-in (plumbing, electrical, AWTS)', 7, 'not_started'),
+  ('Insulation & plasterboard', 8, 'not_started'),
+  ('Fix-out (carpentry, joinery)', 9, 'not_started'),
+  ('Flooring & tiling', 10, 'not_started'),
+  ('Painting', 11, 'not_started'),
+  ('External works (driveway, pool, landscaping)', 12, 'not_started'),
+  ('Final inspections & occupation certificate', 13, 'not_started')
+on conflict (name) do nothing;
+
+insert into compliance_items (regime, item, status, sort_order) values
+  ('DA / Council', 'Footings inspection booked & passed', 'pending', 0),
+  ('DA / Council', 'Slab inspection booked & passed', 'pending', 1),
+  ('DA / Council', 'Frame inspection booked & passed', 'pending', 2),
+  ('DA / Council', 'Waterproofing inspection booked & passed', 'pending', 3),
+  ('DA / Council', 'Final inspection booked & passed', 'pending', 4),
+  ('DA / Council', 'As-built walls checked against DA-approved outline (esp. the REV B wall moves)', 'pending', 5),
+  ('BASIX', 'Showerheads — minimum 4 star', 'pending', 6),
+  ('BASIX', 'Toilets — minimum 3 star', 'pending', 7),
+  ('BASIX', 'Dishwasher — minimum 4 star', 'pending', 8),
+  ('BASIX', 'Kitchen & bathroom taps — minimum 4 star', 'pending', 9),
+  ('BASIX', 'Rainwater tank (44,000L min) plumbed to toilets, laundry cold tap, outdoor tap', 'pending', 10),
+  ('BASIX', 'Stormwater tank (90,000L min) installed', 'pending', 11),
+  ('BASIX', 'Ceiling insulation R3.5 (or better) installed', 'pending', 12),
+  ('BASIX', 'Wall insulation R2.5 (bulk) installed', 'pending', 13),
+  ('BASIX', 'Gas instantaneous hot water — 5 star', 'pending', 14),
+  ('BASIX', 'Individual ducted exhaust fans to bathrooms/laundry/kitchen', 'pending', 15),
+  ('BASIX', 'LED lighting throughout', 'pending', 16),
+  ('BASIX', 'External operable blinds/eaves shading installed as specified', 'pending', 17),
+  ('BASIX', 'Pool/spa heat pump with timer installed', 'pending', 18),
+  ('BASIX', 'Clothes line installed', 'pending', 19),
+  ('Bushfire (BAL)', 'Assessed BAL rating confirmed with certifier', 'pending', 20),
+  ('Bushfire (BAL)', 'Bushfire water supply + Storz valve fitting installed & accessible', 'pending', 21),
+  ('Bushfire (BAL)', 'Construction materials meet BAL rating (windows, decking, external walls)', 'pending', 22),
+  ('Bushfire (BAL)', 'Asset Protection Zone (APZ) landscaping maintained', 'pending', 23),
+  ('Pool', 'Pool safety fencing to AS1926.1 installed', 'pending', 24),
+  ('Pool', 'Pool safety certificate obtained', 'pending', 25),
+  ('Pool', 'Pool registered with council/state register', 'pending', 26),
+  ('Septic / AWTS', 'AWTS5000 system installed & commissioned', 'pending', 27),
+  ('Septic / AWTS', 'ETA beds installed per design (4× 20m×1.4m)', 'pending', 28),
+  ('Septic / AWTS', 'Council on-site wastewater (health) approval obtained', 'pending', 29),
+  ('Septic / AWTS', 'Service contract set up for ongoing AWTS maintenance', 'pending', 30)
+on conflict (regime, item) do nothing;
