@@ -1,7 +1,6 @@
-const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { DOCS_DIR } = require('../db');
+const { saveFile } = require('../lib/file-storage');
 const { store } = require('../lib/store');
 const { layout } = require('../lib/layout');
 const { sendJson } = require('../lib/http');
@@ -118,16 +117,14 @@ async function handleReceiptParseApi(req, res, { readJsonBody }) {
   const ext = EXT_BY_MIME[mime] || path.extname(filename || '').replace('.', '') || 'bin';
   const id = crypto.randomUUID();
   const storedFilename = `${id}.${ext}`;
-  const filePath = path.join(DOCS_DIR, storedFilename);
-
-  fs.writeFileSync(filePath, Buffer.from(base64, 'base64'));
+  const storedPath = await saveFile({ filename: storedFilename, mimeType: mime, buffer: Buffer.from(base64, 'base64') });
 
   await store.insert('documents', {
     id,
     filename: filename || storedFilename,
     mime_type: mime || null,
     category: 'Receipt',
-    file_path: storedFilename,
+    file_path: storedPath,
     uploaded_at: new Date().toISOString(),
   });
 
