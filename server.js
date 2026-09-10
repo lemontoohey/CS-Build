@@ -149,8 +149,29 @@ const server = http.createServer(async (req, res) => {
       const name = path.basename(pathname);
       const file = path.join(__dirname, 'public', name);
       if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return notFound(res);
-      const types = { '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
+      const types = {
+        '.js': 'text/javascript; charset=utf-8',
+        '.css': 'text/css; charset=utf-8',
+        '.png': 'image/png',
+        '.svg': 'image/svg+xml',
+        '.webmanifest': 'application/manifest+json',
+      };
       res.writeHead(200, { 'content-type': types[path.extname(file)] || 'application/octet-stream' });
+      res.end(fs.readFileSync(file));
+      return;
+    }
+    if (req.method === 'GET' && pathname === '/manifest.webmanifest') {
+      const file = path.join(__dirname, 'public', 'manifest.webmanifest');
+      res.writeHead(200, { 'content-type': 'application/manifest+json' });
+      res.end(fs.readFileSync(file));
+      return;
+    }
+    if (req.method === 'GET' && pathname === '/sw.js') {
+      // Served from the root (not /public/) so its default scope covers
+      // the whole origin — a service worker can only control paths at or
+      // below the URL it's served from.
+      const file = path.join(__dirname, 'public', 'sw.js');
+      res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8' });
       res.end(fs.readFileSync(file));
       return;
     }
