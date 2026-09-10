@@ -3,6 +3,7 @@ const { layout } = require('../lib/layout');
 const { escapeHtml, centsToDisplay, todayIso } = require('../lib/render');
 const { daysBetween } = require('./trades');
 const { buildInsights } = require('../lib/insights');
+const { isAiConfigured, reviewEstimate } = require('../lib/ai');
 
 async function handleDashboard(req, res, { sendHtml }) {
   const [rawCategories, transactions, diaryEntries, stages, complianceItems, trades, boqItems] = await Promise.all([
@@ -119,6 +120,8 @@ async function handleDashboard(req, res, { sendHtml }) {
     )
     .join('\n');
 
+  const aiConfigured = await isAiConfigured();
+
   const body = `
     <h1 class="text-2xl font-bold mb-2">Dashboard</h1>
     ${statusBanner}
@@ -162,6 +165,25 @@ async function handleDashboard(req, res, { sendHtml }) {
           </div>`
         )
         .join('\n')}
+    </div>
+
+    <div class="bg-white rounded-lg border-2 border-purple-200 p-4 mb-8">
+      <div class="flex items-start justify-between gap-3 flex-wrap mb-1">
+        <h2 class="text-lg font-semibold text-purple-900">AI estimate check</h2>
+        <span class="text-xs text-purple-500">Reviews your budget, BOQ and compliance for gaps — run it, don't trust it blindly</span>
+      </div>
+      ${
+        aiConfigured
+          ? ''
+          : `<div class="mb-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 text-sm">
+               AI is off — <a class="underline" href="/settings">add your API key on the Settings page</a> to use this.
+             </div>`
+      }
+      <button type="button" id="reviewRunBtn" class="rounded bg-purple-700 hover:bg-purple-800 text-white px-4 py-2 text-sm" ${aiConfigured ? '' : 'disabled'}>
+        Run AI check
+      </button>
+      <span id="reviewStatus" class="ml-3 text-sm text-slate-600"></span>
+      <div id="reviewResults" class="mt-4 space-y-2"></div>
     </div>
 
     <div class="flex items-center justify-between mb-3">
@@ -208,7 +230,60 @@ async function handleDashboard(req, res, { sendHtml }) {
     </div>
   `;
 
-  sendHtml(res, layout({ title: 'Dashboard', activePath: '/', body }));
+  const reviewScript = `
+    <script>
+      (function () {
+        const btn = document.getElementById('reviewRunBtn');
+        const status = document.getElementById('reviewStatus');
+        const results = document.getElementById('reviewResults');
+        if (!btn) return;
+        const severityColor = { high: 'border-red-300 bg-red-50 text-red-900', medium: 'border-amber-300 bg-amber-50 text-amber-900', low: 'border-slate-200 bg-slate-50 text-slate-700' };
+        btn.addEventListener('click', async function () {
+          btn.disabled = true;
+          status.textContent = 'Checking…';
+          results.innerHTML = '';
+          try {
+            const res = await fetch('/api/dashboard/review', { method: 'POST' });
+            const data = await res.json();
+            if (!data.ok) {
+              status.textContent = data.error || 'Could not run the check.';
+              btn.disabled = false;
+              return;
+            }
+            status.textContent = data.findings.length ? (data.findings.length + ' finding' + (data.findings.length === 1 ? '' : 's')) : 'No issues found.';
+            results.innerHTML = data.findings.map(function (f) {
+              const cls = severityColor[f.severity] || severityColor.low;
+              return '<div class="rounded-md border px-4 py-3 text-sm ' + cls + '">' +
+                '<div class="font-semibold uppercase text-xs mb-1">' + f.severity + ' — ' + f.category + '</div>' +
+                '<div class="mb-1">' + f.finding + '</div>' +
+                '<div class="text-xs opacity-80">Suggestion: ' + f.suggestion + '</div>' +
+                '</div>';
+            }).join('');
+          } catch (err) {
+            status.textContent = 'Something went wrong running the check.';
+          }
+          btn.disabled = false;
+        });
+      })();
+    </script>
+  `;
+
+  sendHtml(res, layout({ title: 'Dashboard', activePath: '/', body: body + reviewScript }));
 }
 
-module.exports = { handleDashboard };
+
+async function handleDashboardReviewApi(req, res, { sendJson }) {
+  try {
+    const [categories, boqItems, complianceItems] = await Promise.all([
+      store.listAll('budget_categories', { orderBy: 'sort_order' }),
+      store.listAll('boq_items'),
+      store.listAll('compliance_items'),
+    ]);
+    const result = await reviewEstimate({ categories, boqItems, complianceItems });
+    sendJson(res, result);
+  } catch (err) {
+    sendJson(res, { ok: false, error: err.message || 'AI check failed.' });
+  }
+}
+
+module.exports = { handleDashboard, handleDashboardReviewApi };

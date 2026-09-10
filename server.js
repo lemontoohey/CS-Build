@@ -6,7 +6,7 @@ const path = require('node:path');
 require('./env').loadEnv();
 
 const { sendHtml, sendJson, readJsonBody, redirect, notFound } = require('./lib/http');
-const { handleDashboard } = require('./routes/dashboard');
+const { handleDashboard, handleDashboardReviewApi } = require('./routes/dashboard');
 const { handleBudgetPage, handleBudgetUpdate, handleBudgetNew } = require('./routes/budget');
 const { handleTransactionNew, handleTransactionCreate } = require('./routes/transactions');
 const { handleReceiptsNewPage, handleReceiptParseApi } = require('./routes/receipts');
@@ -282,6 +282,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && pathname === '/api/diary/weather') {
       return await handleDiaryWeatherApi(req, res, helpers, query);
+    }
+    if (req.method === 'POST' && pathname === '/api/dashboard/review') {
+      return await handleDashboardReviewApi(req, res, helpers);
     }
 
     return notFound(res);
