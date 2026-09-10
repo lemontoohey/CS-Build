@@ -78,6 +78,7 @@ async function handleMaterialsPage(req, res, { sendHtml }, flash) {
         .join('');
 
       return `<tr class="border-b border-slate-100 align-top">
+        <td class="py-2 pr-2"><input type="checkbox" class="po-check" value="${item.id}" /></td>
         <td class="py-2 pr-4">
           <div class="font-medium">${escapeHtml(item.description)}</div>
           <div class="text-xs text-slate-500">${escapeHtml(item.category_name)}</div>
@@ -123,6 +124,7 @@ async function handleMaterialsPage(req, res, { sendHtml }, flash) {
       <table class="w-full text-sm">
         <thead>
           <tr class="text-left text-slate-500 border-b border-slate-200">
+            <th class="py-2 pr-2 font-medium"></th>
             <th class="py-2 pr-4 font-medium">Item</th>
             <th class="py-2 pr-4 font-medium">Qty</th>
             <th class="py-2 pr-4 font-medium">Unit cost</th>
@@ -131,9 +133,35 @@ async function handleMaterialsPage(req, res, { sendHtml }, flash) {
             <th class="py-2 pr-4 font-medium">Quotes</th>
           </tr>
         </thead>
-        <tbody>${rows || '<tr><td class="py-3 text-slate-500" colspan="6">No items yet — add one below.</td></tr>'}</tbody>
+        <tbody>${rows || '<tr><td class="py-3 text-slate-500" colspan="7">No items yet — add one below.</td></tr>'}</tbody>
       </table>
     </div>
+
+    <div class="bg-white rounded-lg border border-slate-200 p-5 mb-8 max-w-xl">
+      <h2 class="font-semibold mb-1">Create a purchase order</h2>
+      <p class="text-xs text-slate-500 mb-3">Tick items above, name the supplier, and generate a printable PO.</p>
+      <form method="post" action="/purchase-orders/new" id="poForm" class="flex flex-wrap gap-2 items-center">
+        <input type="text" name="supplier" placeholder="Supplier name" required class="rounded border border-slate-300 px-3 py-2 text-sm flex-1 min-w-[160px]" />
+        <input type="text" name="notes" placeholder="Notes (optional)" class="rounded border border-slate-300 px-3 py-2 text-sm flex-1 min-w-[160px]" />
+        <div id="poItemIdsHolder"></div>
+        <button class="bg-[#9b1b15] transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] text-white px-4 py-2 rounded text-sm hover:bg-[#7a1611]">Create PO from checked items</button>
+      </form>
+    </div>
+    <script>
+      (function () {
+        var form = document.getElementById('poForm');
+        if (!form) return;
+        form.addEventListener('submit', function () {
+          var holder = document.getElementById('poItemIdsHolder');
+          holder.innerHTML = '';
+          Array.prototype.forEach.call(document.querySelectorAll('.po-check:checked'), function (cb) {
+            var input = document.createElement('input');
+            input.type = 'hidden'; input.name = 'item_ids'; input.value = cb.value;
+            holder.appendChild(input);
+          });
+        });
+      })();
+    </script>
 
     <h2 class="text-lg font-semibold mb-3">Add a BOQ item</h2>
     <form method="post" action="/materials/new" class="bg-white rounded-lg border border-slate-200 p-6 max-w-2xl grid grid-cols-2 gap-4">

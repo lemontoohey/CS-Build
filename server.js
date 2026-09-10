@@ -22,6 +22,19 @@ const {
   handleDiaryWeatherApi,
 } = require('./routes/diary');
 const {
+  handlePhotosPage,
+  handlePhotoUploadApi,
+  handlePhotoFile,
+  handlePhotoToggleDefect,
+} = require('./routes/photos');
+const {
+  handlePurchaseOrdersPage,
+  handlePurchaseOrderCreate,
+  handlePurchaseOrderDetail,
+  handlePurchaseOrderStatus,
+  handlePurchaseOrderPrint,
+} = require('./routes/purchase-orders');
+const {
   handleMaterialsPage,
   handleMaterialNew,
   handleMaterialStatus,
@@ -93,11 +106,29 @@ const server = http.createServer(async (req, res) => {
       const id = pathname.slice('/documents/file/'.length);
       return await handleDocumentFile(req, res, id);
     }
+    if (req.method === 'GET' && pathname === '/photos') {
+      return await handlePhotosPage(req, res, helpers, query, flash);
+    }
+    if (req.method === 'GET' && pathname.startsWith('/photos/file/')) {
+      const photoId = pathname.slice('/photos/file/'.length);
+      return await handlePhotoFile(req, res, photoId);
+    }
     if (req.method === 'GET' && pathname === '/diary') {
       return await handleDiaryPage(req, res, helpers, flash);
     }
     if (req.method === 'GET' && pathname === '/materials') {
       return await handleMaterialsPage(req, res, helpers, flash);
+    }
+    if (req.method === 'GET' && pathname === '/purchase-orders') {
+      return await handlePurchaseOrdersPage(req, res, helpers, flash);
+    }
+    if (req.method === 'GET' && pathname.startsWith('/purchase-orders/') && pathname.endsWith('/print')) {
+      const poId = pathname.slice('/purchase-orders/'.length, -'/print'.length);
+      return await handlePurchaseOrderPrint(req, res, poId);
+    }
+    if (req.method === 'GET' && pathname.startsWith('/purchase-orders/')) {
+      const poId = pathname.slice('/purchase-orders/'.length);
+      return await handlePurchaseOrderDetail(req, res, helpers, poId, flash);
     }
     if (req.method === 'GET' && pathname === '/calculators') {
       return await handleCalculatorsPage(req, res, helpers, query, flash);
@@ -152,8 +183,19 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/diary') {
       return await handleDiaryCreate(req, res, helpers);
     }
+    if (req.method === 'POST' && pathname.startsWith('/photos/') && pathname.endsWith('/defect')) {
+      const photoId = pathname.slice('/photos/'.length, -'/defect'.length);
+      return await handlePhotoToggleDefect(req, res, helpers, photoId);
+    }
     if (req.method === 'POST' && pathname === '/materials/new') {
       return await handleMaterialNew(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/purchase-orders/new') {
+      return await handlePurchaseOrderCreate(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname.startsWith('/purchase-orders/') && pathname.endsWith('/status')) {
+      const poId = pathname.slice('/purchase-orders/'.length, -'/status'.length);
+      return await handlePurchaseOrderStatus(req, res, helpers, poId);
     }
     if (req.method === 'POST' && pathname === '/materials/status') {
       return await handleMaterialStatus(req, res, helpers);
@@ -234,6 +276,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && pathname === '/api/diary/structure') {
       return await handleDiaryStructureApi(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/api/photos/upload') {
+      return await handlePhotoUploadApi(req, res, helpers);
     }
     if (req.method === 'GET' && pathname === '/api/diary/weather') {
       return await handleDiaryWeatherApi(req, res, helpers, query);

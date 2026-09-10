@@ -229,6 +229,39 @@ create table if not exists formulate_recipes (
   sort_order integer not null default 0
 );
 
+create table if not exists purchase_orders (
+  id bigint generated always as identity primary key,
+  supplier text not null,
+  status text not null default 'draft',
+  notes text,
+  signature_id bigint,
+  created_at text not null
+);
+
+create table if not exists purchase_order_lines (
+  id bigint generated always as identity primary key,
+  purchase_order_id bigint not null references purchase_orders(id),
+  boq_item_id bigint references boq_items(id),
+  description text not null,
+  quantity double precision,
+  unit text,
+  unit_cost_cents bigint,
+  sort_order integer not null default 0
+);
+
+create table if not exists photos (
+  id text primary key,
+  filename text not null,
+  mime_type text,
+  file_path text not null,
+  caption text,
+  taken_at text not null,
+  linked_type text,
+  linked_id text,
+  is_defect boolean not null default false,
+  created_at text not null
+);
+
 create table if not exists formulate_lines (
   id bigint generated always as identity primary key,
   recipe_id bigint not null,

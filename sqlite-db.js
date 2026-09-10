@@ -180,6 +180,39 @@ db.exec(`
     sort_order INTEGER NOT NULL DEFAULT 0
   );
 
+  CREATE TABLE IF NOT EXISTS purchase_orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    supplier TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft',
+    notes TEXT,
+    signature_id INTEGER,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS purchase_order_lines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    purchase_order_id INTEGER NOT NULL REFERENCES purchase_orders(id),
+    boq_item_id INTEGER REFERENCES boq_items(id),
+    description TEXT NOT NULL,
+    quantity REAL,
+    unit TEXT,
+    unit_cost_cents INTEGER,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS photos (
+    id TEXT PRIMARY KEY,
+    filename TEXT NOT NULL,
+    mime_type TEXT,
+    file_path TEXT NOT NULL,
+    caption TEXT,
+    taken_at TEXT NOT NULL,
+    linked_type TEXT,
+    linked_id TEXT,
+    is_defect INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS formulate_lines (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     recipe_id INTEGER NOT NULL,
