@@ -295,6 +295,16 @@ create table if not exists selection_options (
   created_at text not null
 );
 
+create table if not exists signatures (
+  id bigint generated always as identity primary key,
+  signer_name text not null,
+  image_data text not null,
+  signed_at text not null,
+  linked_type text,
+  linked_id bigint,
+  created_at text not null
+);
+
 insert into compliance_items (regime, item, status, sort_order) values
   ('DA / Council', 'Footings inspection booked & passed', 'pending', 0),
   ('DA / Council', 'Slab inspection booked & passed', 'pending', 1),

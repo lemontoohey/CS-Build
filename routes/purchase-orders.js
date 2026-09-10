@@ -98,13 +98,14 @@ async function loadPo(id) {
   const lines = (await store.getWhere('purchase_order_lines', { purchase_order_id: po.id })).sort(
     (a, b) => a.sort_order - b.sort_order
   );
-  return { po, lines };
+  const signature = po.signature_id ? await store.getById('signatures', po.signature_id) : null;
+  return { po, lines, signature };
 }
 
 async function handlePurchaseOrderDetail(req, res, { sendHtml }, id, flash) {
   const loaded = await loadPo(id);
   if (!loaded) return sendHtml(res, layout({ title: 'Purchase order', activePath: '/purchase-orders', body: '<p>Not found.</p>' }));
-  const { po, lines } = loaded;
+  const { po, lines, signature } = loaded;
   const total = await lineTotal(lines);
 
   const lineRows = lines
@@ -147,6 +148,95 @@ async function handlePurchaseOrderDetail(req, res, { sendHtml }, id, flash) {
         <tfoot><tr><td colspan="3" class="py-2 pr-4 text-right font-medium">Total</td><td class="py-2 pr-4 font-medium">${centsToDisplay(total)}</td></tr></tfoot>
       </table>
     </div>
+
+    <div class="bg-white rounded-lg border border-slate-200 p-4 mt-6 max-w-xl">
+      <h2 class="font-semibold text-sm mb-3">Signature</h2>
+      ${
+        signature
+          ? `<img src="${signature.image_data}" alt="Signature" class="border border-slate-200 rounded bg-white h-24" />
+             <div class="text-xs text-slate-500 mt-1">Signed by ${escapeHtml(signature.signer_name)} on ${escapeHtml((signature.signed_at || '').slice(0, 10))}</div>`
+          : `<div id="signaturePad">
+               <canvas id="sigCanvas" width="480" height="140" class="border border-slate-300 rounded bg-white touch-none w-full max-w-md" style="cursor:crosshair;"></canvas>
+               <div class="flex flex-wrap items-center gap-2 mt-2">
+                 <input type="text" id="signerNameInput" placeholder="Signer's name" class="rounded border border-slate-300 px-2 py-1.5 text-sm" />
+                 <button type="button" id="sigClearBtn" class="text-xs rounded border border-slate-300 px-3 py-1.5 bg-white hover:border-slate-400">Clear</button>
+                 <button type="button" id="sigSaveBtn" class="${BUTTON_CLASSES} px-3 py-1.5 rounded text-xs">Save signature</button>
+                 <span id="sigStatus" class="text-xs text-slate-600"></span>
+               </div>
+             </div>
+             <script>
+               (function () {
+                 var canvas = document.getElementById('sigCanvas');
+                 var ctx = canvas.getContext('2d');
+                 ctx.lineWidth = 2;
+                 ctx.lineCap = 'round';
+                 ctx.strokeStyle = '#1e293b';
+                 var drawing = false;
+                 var hasDrawn = false;
+
+                 function pos(evt) {
+                   var rect = canvas.getBoundingClientRect();
+                   var scaleX = canvas.width / rect.width;
+                   var scaleY = canvas.height / rect.height;
+                   var point = evt.touches ? evt.touches[0] : evt;
+                   return { x: (point.clientX - rect.left) * scaleX, y: (point.clientY - rect.top) * scaleY };
+                 }
+                 function start(evt) {
+                   evt.preventDefault();
+                   drawing = true;
+                   hasDrawn = true;
+                   var p = pos(evt);
+                   ctx.beginPath();
+                   ctx.moveTo(p.x, p.y);
+                 }
+                 function move(evt) {
+                   if (!drawing) return;
+                   evt.preventDefault();
+                   var p = pos(evt);
+                   ctx.lineTo(p.x, p.y);
+                   ctx.stroke();
+                 }
+                 function end() { drawing = false; }
+
+                 canvas.addEventListener('mousedown', start);
+                 canvas.addEventListener('mousemove', move);
+                 window.addEventListener('mouseup', end);
+                 canvas.addEventListener('touchstart', start, { passive: false });
+                 canvas.addEventListener('touchmove', move, { passive: false });
+                 canvas.addEventListener('touchend', end);
+
+                 document.getElementById('sigClearBtn').addEventListener('click', function () {
+                   ctx.clearRect(0, 0, canvas.width, canvas.height);
+                   hasDrawn = false;
+                 });
+
+                 document.getElementById('sigSaveBtn').addEventListener('click', function () {
+                   var status = document.getElementById('sigStatus');
+                   var name = document.getElementById('signerNameInput').value.trim();
+                   if (!name) { status.textContent = 'Enter the signer\'s name first.'; return; }
+                   if (!hasDrawn) { status.textContent = 'Draw a signature first.'; return; }
+                   status.textContent = 'Saving…';
+                   fetch('/api/signatures', {
+                     method: 'POST',
+                     headers: { 'content-type': 'application/json' },
+                     body: JSON.stringify({
+                       signer_name: name,
+                       image_data: canvas.toDataURL('image/png'),
+                       linked_type: 'purchase_order',
+                       linked_id: ${po.id},
+                     }),
+                   })
+                     .then(function (r) { return r.json(); })
+                     .then(function (data) {
+                       if (data.ok) { window.location.reload(); }
+                       else { status.textContent = data.error || 'Could not save the signature.'; }
+                     })
+                     .catch(function () { status.textContent = 'Could not save the signature.'; });
+                 });
+               })();
+             </script>`
+      }
+    </div>
   `;
   sendHtml(res, layout({ title: `PO-${String(po.id).padStart(4, '0')}`, activePath: '/purchase-orders', body, flash }));
 }
@@ -162,7 +252,7 @@ async function handlePurchaseOrderStatus(req, res, helpers, id) {
 async function handlePurchaseOrderPrint(req, res, id) {
   const loaded = await loadPo(id);
   if (!loaded) return notFound(res);
-  const { po, lines } = loaded;
+  const { po, lines, signature } = loaded;
   const total = await lineTotal(lines);
   const lineRows = lines
     .map(
@@ -194,6 +284,11 @@ async function handlePurchaseOrderPrint(req, res, id) {
       <table><thead><tr><th>Item</th><th>Qty</th><th>Unit cost</th><th>Line total</th></tr></thead>
       <tbody>${lineRows}</tbody>
       <tfoot><tr><td colspan="3" style="text-align:right;padding:6px 10px;font-weight:bold;">Total</td><td style="padding:6px 10px;font-weight:bold;">${centsToDisplay(total)}</td></tr></tfoot></table>
+      ${
+        signature
+          ? `<div style="margin-top:32px;"><img src="${signature.image_data}" alt="Signature" style="height:80px;border-bottom:1px solid #222;" /><p style="font-size:12px;color:#555;margin-top:4px;">Signed by ${escapeHtml(signature.signer_name)} on ${escapeHtml((signature.signed_at || '').slice(0, 10))}</p></div>`
+          : ''
+      }
       <p style="margin-top:40px;font-size:11px;color:#888;">Generated by CS Build — estimate only, confirm against the supplier's own quote.</p>
     </body></html>`);
 }

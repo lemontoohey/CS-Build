@@ -41,6 +41,7 @@ const {
   handleSelectionOptionChoose,
   handleSelectionStatus,
 } = require('./routes/selections');
+const { handleSignatureCreate } = require('./routes/signatures');
 const {
   handleMaterialsPage,
   handleMaterialNew,
@@ -230,6 +231,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && pathname === '/selections/new') {
       return await handleSelectionCreate(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/api/signatures') {
+      return await handleSignatureCreate(req, res, helpers);
     }
     if (req.method === 'POST') {
       const chooseMatch = pathname.match(/^\/selections\/(\d+)\/options\/(\d+)\/choose$/);
