@@ -15,7 +15,12 @@ const {
   handleDocumentUploadApi,
   handleDocumentFile,
 } = require('./routes/documents');
-const { handleDiaryPage, handleDiaryCreate } = require('./routes/diary');
+const {
+  handleDiaryPage,
+  handleDiaryCreate,
+  handleDiaryStructureApi,
+  handleDiaryWeatherApi,
+} = require('./routes/diary');
 const {
   handleMaterialsPage,
   handleMaterialNew,
@@ -31,6 +36,8 @@ const {
   handlePlanMeasureSave,
   handlePlanMeasureDelete,
   handlePlanMeasureSend,
+  handlePlanMeasureTakeoffApi,
+  handlePlanMeasureTakeoffConfirm,
 } = require('./routes/plan-measure');
 const { handleFormulatePage, handleFormulateNew, handleFormulateApply } = require('./routes/formulate');
 const {
@@ -218,6 +225,18 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && pathname === '/api/plan-measure/send-to-materials') {
       return await handlePlanMeasureSend(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/api/plan-measure/takeoff') {
+      return await handlePlanMeasureTakeoffApi(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/api/plan-measure/takeoff/confirm') {
+      return await handlePlanMeasureTakeoffConfirm(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/api/diary/structure') {
+      return await handleDiaryStructureApi(req, res, helpers);
+    }
+    if (req.method === 'GET' && pathname === '/api/diary/weather') {
+      return await handleDiaryWeatherApi(req, res, helpers, query);
     }
 
     return notFound(res);

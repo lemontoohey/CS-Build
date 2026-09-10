@@ -192,6 +192,23 @@ db.exec(`
   );
 `);
 
+// --- Lightweight column migrations -----------------------------------
+// CREATE TABLE IF NOT EXISTS only helps brand-new databases; an already-
+// existing data/app.db (anyone who ran this before today) needs its
+// diary_entries table widened in place for the AI diary assistant.
+// Safe to run on every boot — it's a no-op once the columns exist.
+function ensureColumn(table, column, ddlType) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!cols.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddlType}`);
+  }
+}
+
+ensureColumn('diary_entries', 'raw_note', 'TEXT');
+ensureColumn('diary_entries', 'ai_generated', 'INTEGER NOT NULL DEFAULT 0');
+ensureColumn('diary_entries', 'delay_flagged', 'INTEGER NOT NULL DEFAULT 0');
+ensureColumn('diary_entries', 'schedule_note', 'TEXT');
+
 // Seed the Phase 1 budget categories, drawn from the House Cooper build spec
 // (site services, structure, and finishes actually scoped on this project),
 // only if the table is empty — so re-running the server never duplicates

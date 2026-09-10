@@ -578,3 +578,188 @@
     hint.textContent = 'Could not load that plan: ' + err.message;
   });
 })();
+
+// --- AI takeoff panel --------------------------------------------------
+// Separate, self-contained IIFE: renders page thumbnails for picking which
+// pages to send, posts the selected page images, and shows the draft BOQ
+// for review before anything is added to Materials.
+(function () {
+  var boot = window.PLAN_MEASURE_BOOT;
+  var pagesPanel = document.getElementById('takeoffPagesPanel');
+  var runBtn = document.getElementById('takeoffRunBtn');
+  var statusEl = document.getElementById('takeoffStatus');
+  var resultsEl = document.getElementById('takeoffResults');
+  if (!boot || !pagesPanel || !runBtn) return;
+
+  var pageThumbs = []; // { pageNumber, base64, checked }
+  var MAX_PAGES = 10;
+
+  function canvasToBase64(canvas) {
+    return canvas.toDataURL('image/png').split(',')[1];
+  }
+
+  async function buildThumbs() {
+    var mime = (boot.mime || '').toLowerCase();
+    if (mime.includes('pdf') && window.pdfjsLib) {
+      var pdf = await pdfjsLib.getDocument(boot.fileUrl).promise;
+      var count = Math.min(pdf.numPages, 40);
+      for (var i = 1; i <= count; i++) {
+        var page = await pdf.getPage(i);
+        var viewport = page.getViewport({ scale: 0.35 });
+        var thumbCanvas = document.createElement('canvas');
+        thumbCanvas.width = viewport.width;
+        thumbCanvas.height = viewport.height;
+        await page.render({ canvasContext: thumbCanvas.getContext('2d'), viewport: viewport }).promise;
+        pageThumbs.push({ pageNumber: i, dataUrl: thumbCanvas.toDataURL('image/png'), checked: false });
+      }
+    } else {
+      pageThumbs.push({ pageNumber: 1, dataUrl: boot.fileUrl, checked: true });
+    }
+    renderThumbs();
+  }
+
+  function renderThumbs() {
+    if (!pageThumbs.length) {
+      pagesPanel.innerHTML = '<p class="text-xs text-slate-500">Loading pages…</p>';
+      return;
+    }
+    pagesPanel.innerHTML =
+      '<p class="text-xs text-slate-500 mb-2">Pick up to ' + MAX_PAGES + ' pages — floor plans, elevations, the window/door schedule, and the roof plan work best.</p>' +
+      '<div class="flex flex-wrap gap-2">' +
+      pageThumbs
+        .map(function (p) {
+          return (
+            '<label class="block cursor-pointer border-2 rounded ' +
+            (p.checked ? 'border-[#9b1b15]' : 'border-slate-200') +
+            '" data-page="' + p.pageNumber + '">' +
+            '<img src="' + p.dataUrl + '" class="block w-20 h-auto" />' +
+            '<div class="text-[10px] text-center py-0.5 bg-slate-50">p.' + p.pageNumber + '</div>' +
+            '</label>'
+          );
+        })
+        .join('') +
+      '</div>';
+
+    Array.prototype.forEach.call(pagesPanel.querySelectorAll('[data-page]'), function (el) {
+      el.addEventListener('click', function () {
+        var pn = Number(el.getAttribute('data-page'));
+        var thumb = pageThumbs.find(function (t) { return t.pageNumber === pn; });
+        var checkedCount = pageThumbs.filter(function (t) { return t.checked; }).length;
+        if (!thumb.checked && checkedCount >= MAX_PAGES) {
+          statusEl.textContent = 'You can select up to ' + MAX_PAGES + ' pages at a time.';
+          return;
+        }
+        thumb.checked = !thumb.checked;
+        renderThumbs();
+      });
+    });
+  }
+
+  function renderResults(data) {
+    if (!data.items || !data.items.length) {
+      resultsEl.innerHTML = '<p class="text-sm text-slate-500">No items drafted from those pages.</p>';
+      return;
+    }
+    var header =
+      (data.floor_area_sqm || data.roof_area_sqm
+        ? '<p class="text-sm mb-2"><strong>Estimate — verify:</strong>' +
+          (data.floor_area_sqm ? ' floor area ' + data.floor_area_sqm + ' m2.' : '') +
+          (data.roof_area_sqm ? ' roof area ' + data.roof_area_sqm + ' m2.' : '') +
+          '</p>'
+        : '') +
+      (data.assumptions ? '<p class="text-xs text-slate-500 mb-3">Assumptions: ' + data.assumptions + '</p>' : '');
+
+    var rows = data.items
+      .map(function (item, idx) {
+        var catOptions = boot.categories
+          .map(function (c) {
+            return '<option value="' + c.id + '" ' + (String(c.id) === String(item.category_id) ? 'selected' : '') + '>' + c.name + '</option>';
+          })
+          .join('');
+        return (
+          '<tr class="border-b border-slate-100" data-idx="' + idx + '">' +
+          '<td class="py-1.5 pr-2"><input type="checkbox" class="takeoff-check" checked /></td>' +
+          '<td class="py-1.5 pr-2 text-sm">' + item.description + '<div class="text-[11px] text-amber-700">estimate — verify' + (item.source ? ' · ' + item.source : '') + '</div></td>' +
+          '<td class="py-1.5 pr-2"><select class="takeoff-cat text-xs rounded border border-slate-300 px-1 py-0.5">' + catOptions + '</select></td>' +
+          '<td class="py-1.5 pr-2"><input type="text" class="takeoff-qty w-16 text-xs rounded border border-slate-300 px-1 py-0.5" value="' + item.quantity + '" /></td>' +
+          '<td class="py-1.5 pr-2 text-xs">' + (item.unit || '') + '</td>' +
+          '</tr>'
+        );
+      })
+      .join('');
+
+    resultsEl.innerHTML =
+      header +
+      '<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-slate-500 border-b border-slate-200">' +
+      '<th class="py-1.5 pr-2"></th><th class="py-1.5 pr-2 font-medium">Item</th><th class="py-1.5 pr-2 font-medium">Category</th>' +
+      '<th class="py-1.5 pr-2 font-medium">Qty</th><th class="py-1.5 pr-2 font-medium">Unit</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table></div>' +
+      '<button type="button" id="takeoffConfirmBtn" class="' + runBtn.className + ' mt-3">Add checked items to Materials</button>';
+
+    document.getElementById('takeoffConfirmBtn').addEventListener('click', async function () {
+      var trs = resultsEl.querySelectorAll('tbody tr');
+      var items = [];
+      Array.prototype.forEach.call(trs, function (tr, idx) {
+        var checked = tr.querySelector('.takeoff-check').checked;
+        if (!checked) return;
+        var original = data.items[idx];
+        items.push({
+          description: original.description,
+          category_id: tr.querySelector('.takeoff-cat').value,
+          quantity: tr.querySelector('.takeoff-qty').value,
+          unit: original.unit,
+          source: original.source,
+        });
+      });
+      if (!items.length) return;
+      statusEl.textContent = 'Adding to Materials…';
+      var res = await fetch('/api/plan-measure/takeoff/confirm', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ items: items }),
+      });
+      var out = await res.json();
+      if (out.ok) {
+        window.location.href = '/materials?flash=' + encodeURIComponent(out.count + ' AI takeoff item(s) added — confirm before ordering.');
+      } else {
+        statusEl.textContent = 'Could not add items: ' + (out.error || 'unknown error');
+      }
+    });
+  }
+
+  runBtn.addEventListener('click', async function () {
+    var selected = pageThumbs.filter(function (t) { return t.checked; });
+    if (!selected.length) {
+      statusEl.textContent = 'Pick at least one page first.';
+      return;
+    }
+    statusEl.textContent = 'Reading ' + selected.length + ' page(s) with AI — this can take a bit…';
+    runBtn.disabled = true;
+    resultsEl.innerHTML = '';
+    try {
+      var pages = selected.map(function (t) {
+        return { page_number: t.pageNumber, base64: t.dataUrl.split(',')[1], mediaType: 'image/png' };
+      });
+      var res = await fetch('/api/plan-measure/takeoff', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ document_id: boot.documentId, pages: pages }),
+      });
+      var data = await res.json();
+      if (!data.ok) {
+        statusEl.textContent = 'Could not draft a takeoff: ' + (data.error || 'unknown error');
+      } else {
+        statusEl.textContent = '';
+        renderResults(data);
+      }
+    } catch (err) {
+      statusEl.textContent = 'Failed: ' + err.message;
+    } finally {
+      runBtn.disabled = false;
+    }
+  });
+
+  buildThumbs().catch(function (err) {
+    pagesPanel.innerHTML = '<p class="text-xs text-red-700">Could not load pages: ' + err.message + '</p>';
+  });
+})();

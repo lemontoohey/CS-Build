@@ -4,6 +4,7 @@ const { escapeHtml } = require('../lib/render');
 const { sendJson } = require('../lib/http');
 const { listCategories } = require('./budget');
 const { BUTTON_CLASSES } = require('../lib/theme');
+const { isAiConfigured, draftTakeoff } = require('../lib/ai');
 
 async function ensureSheet(documentId, pageNumber = 1) {
   const page = Number(pageNumber) || 1;
@@ -144,6 +145,8 @@ async function handlePlanMeasurePage(req, res, { sendHtml }, query, flash) {
     .map((r) => `<option value="${escapeHtml(r.slug || String(r.id))}">${escapeHtml(r.name)}</option>`)
     .join('');
 
+  const aiConfigured = await isAiConfigured();
+
   const boot = {
     documentId: doc.id,
     filename: doc.filename,
@@ -152,6 +155,7 @@ async function handlePlanMeasurePage(req, res, { sendHtml }, query, flash) {
     sheet,
     measurements,
     categories: categories.map((c) => ({ id: c.id, name: c.name })),
+    aiConfigured,
   };
 
   const body = `
@@ -218,6 +222,31 @@ async function handlePlanMeasurePage(req, res, { sendHtml }, query, flash) {
           <button type="button" id="toFormulateBtn" class="w-full text-xs rounded border border-slate-300 px-3 py-1.5 bg-white">Open in Formulate</button>
         </div>
       </div>
+    </div>
+
+    <div class="bg-white rounded-lg border border-slate-200 p-5 mt-6">
+      <div class="flex items-start justify-between gap-3 flex-wrap mb-1">
+        <h2 class="font-semibold">AI takeoff — draft a starting BOQ from this plan</h2>
+      </div>
+      <p class="text-sm text-slate-600 mb-3 max-w-3xl">
+        Reads the pages you pick (floor plans, elevations, the window/door schedule, roof plan work best)
+        and drafts rough quantities: floor/roof area, a full glazing list, big-ticket volumes.
+        <strong>Every line is a starting estimate</strong> — check it against a real quote or quantity
+        surveyor before ordering anything.
+      </p>
+      ${
+        aiConfigured
+          ? ''
+          : `<div class="mb-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 text-sm">
+               AI is off — <a class="underline" href="/settings">add your API key on the Settings page</a> to use this.
+             </div>`
+      }
+      <div id="takeoffPagesPanel" class="mb-3"></div>
+      <button type="button" id="takeoffRunBtn" class="${BUTTON_CLASSES} px-4 py-2 rounded text-sm" ${aiConfigured ? '' : 'disabled'}>
+        Draft BOQ from selected pages
+      </button>
+      <span id="takeoffStatus" class="ml-3 text-sm text-slate-600"></span>
+      <div id="takeoffResults" class="mt-4"></div>
     </div>
     <script>window.PLAN_MEASURE_BOOT = ${JSON.stringify(boot).replace(/</g, '\\u003c')};</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -295,6 +324,73 @@ async function handlePlanMeasureSend(req, res, { readJsonBody, sendJson }) {
   sendJson(res, { ok: true, count: created.length });
 }
 
+// --- AI materials takeoff (spec §4.2) --------------------------------------
+// Client renders each selected PDF page to an image (pdf.js, already loaded
+// for the manual trace tool) and posts them here. Nothing is written to
+// Materials until handlePlanMeasureTakeoffConfirm is called with the items
+// the person actually ticked.
+
+async function handlePlanMeasureTakeoffApi(req, res, { readJsonBody, sendJson }) {
+  const body = await readJsonBody(req);
+  const pages = Array.isArray(body.pages) ? body.pages : [];
+  if (!pages.length) return sendJson(res, { ok: false, error: 'No pages selected.' }, 400);
+  if (pages.length > 10) return sendJson(res, { ok: false, error: 'Select 10 pages or fewer at a time.' }, 400);
+
+  try {
+    const categories = await listCategories();
+    const draft = await draftTakeoff({
+      pages: pages.map((p) => ({ base64: p.base64, mediaType: p.mediaType || 'image/png' })),
+      categoryNames: categories.map((c) => c.name),
+    });
+
+    const items = (draft.items || []).map((item) => {
+      const match = categories.find((c) => c.name.toLowerCase() === String(item.category || '').toLowerCase());
+      return {
+        description: item.description,
+        category_id: match ? match.id : '',
+        category_name: match ? match.name : item.category || '',
+        quantity: item.quantity,
+        unit: item.unit,
+        source: item.source || '',
+        confidence: item.confidence || 'medium',
+      };
+    });
+
+    sendJson(res, {
+      ok: true,
+      floor_area_sqm: draft.floor_area_sqm ?? null,
+      roof_area_sqm: draft.roof_area_sqm ?? null,
+      assumptions: draft.assumptions || '',
+      items,
+    });
+  } catch (err) {
+    sendJson(res, { ok: false, error: err.message }, 200);
+  }
+}
+
+async function handlePlanMeasureTakeoffConfirm(req, res, { readJsonBody, sendJson }) {
+  const body = await readJsonBody(req);
+  const items = Array.isArray(body.items) ? body.items : [];
+  let count = 0;
+  for (const item of items) {
+    if (!item.category_id || !item.description) continue;
+    const sourceNote = item.source ? ` (${item.source})` : '';
+    await store.insert('boq_items', {
+      category_id: Number(item.category_id),
+      description: item.description,
+      quantity: Number(item.quantity) || 0,
+      unit: item.unit || '',
+      unit_cost_cents: null,
+      supplier: null,
+      status: 'not_ordered',
+      note: `AI estimate from plans — confirm with your builder/supplier/QS before ordering.${sourceNote}`,
+      created_at: new Date().toISOString(),
+    });
+    count += 1;
+  }
+  sendJson(res, { ok: true, count });
+}
+
 module.exports = {
   handlePlanMeasurePage,
   handlePlanMeasureState,
@@ -302,5 +398,7 @@ module.exports = {
   handlePlanMeasureSave,
   handlePlanMeasureDelete,
   handlePlanMeasureSend,
+  handlePlanMeasureTakeoffApi,
+  handlePlanMeasureTakeoffConfirm,
   ensureSheet,
 };

@@ -50,6 +50,10 @@ create table if not exists diary_entries (
   trades_present text,
   work_done text,
   issues text,
+  raw_note text,
+  ai_generated boolean not null default false,
+  delay_flagged boolean not null default false,
+  schedule_note text,
   created_at text not null
 );
 
