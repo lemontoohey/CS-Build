@@ -4,6 +4,7 @@ const { escapeHtml, centsToDisplay, todayIso } = require('../lib/render');
 const { daysBetween } = require('./trades');
 const { buildInsights } = require('../lib/insights');
 const { isAiConfigured, reviewEstimate } = require('../lib/ai');
+const xeroAuth = require('../lib/xero-auth');
 
 async function handleDashboard(req, res, { sendHtml }) {
   const [rawCategories, transactions, diaryEntries, stages, complianceItems, trades, boqItems] = await Promise.all([
@@ -98,6 +99,9 @@ async function handleDashboard(req, res, { sendHtml }) {
     })
     .join('\n');
 
+  const aiConfigured = await isAiConfigured();
+  const xeroConnected = xeroAuth.isConnected();
+
   const txnRows = recentTransactions
     .map(
       (t) => `<tr class="border-b border-slate-100">
@@ -105,6 +109,13 @@ async function handleDashboard(req, res, { sendHtml }) {
         <td class="py-2 pr-4">${escapeHtml(t.supplier || '—')}</td>
         <td class="py-2 pr-4">${escapeHtml(t.category_name)}</td>
         <td class="py-2 text-right">${centsToDisplay(t.amount_cents)}</td>
+        <td class="py-2 pl-4 text-right whitespace-nowrap">${
+          !xeroConnected
+            ? ''
+            : t.xero_invoice_id
+              ? '<span class="text-xs text-emerald-700">✓ Synced</span>'
+              : `<button type="button" class="push-xero-btn text-xs rounded border border-slate-300 px-2 py-1 bg-white hover:border-slate-400" data-id="${t.id}">→ Xero</button>`
+        }</td>
       </tr>`
     )
     .join('\n');
@@ -119,8 +130,6 @@ async function handleDashboard(req, res, { sendHtml }) {
       </div>`
     )
     .join('\n');
-
-  const aiConfigured = await isAiConfigured();
 
   const body = `
     <h1 class="text-2xl font-bold mb-2">Dashboard</h1>
@@ -263,6 +272,35 @@ async function handleDashboard(req, res, { sendHtml }) {
             status.textContent = 'Something went wrong running the check.';
           }
           btn.disabled = false;
+        });
+      })();
+      (function () {
+        document.querySelectorAll('.push-xero-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            btn.disabled = true;
+            var original = btn.textContent;
+            btn.textContent = 'Sending…';
+            fetch('/api/xero/push-transaction', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ transaction_id: btn.dataset.id }),
+            })
+              .then(function (r) { return r.json(); })
+              .then(function (data) {
+                if (data.ok) {
+                  btn.outerHTML = '<span class="text-xs text-emerald-700">✓ Synced</span>';
+                } else {
+                  btn.textContent = original;
+                  btn.disabled = false;
+                  alert(data.error || 'Could not push to Xero.');
+                }
+              })
+              .catch(function () {
+                btn.textContent = original;
+                btn.disabled = false;
+                alert('Could not push to Xero.');
+              });
+          });
         });
       })();
     </script>

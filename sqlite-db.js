@@ -274,6 +274,11 @@ ensureColumn('diary_entries', 'ai_generated', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('diary_entries', 'delay_flagged', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('diary_entries', 'schedule_note', 'TEXT');
 
+// Xero accounting sync (scaffolding) — tracks which transactions have
+// already been pushed to Xero as a bill, so the button on the dashboard
+// can show "Synced" instead of letting the same receipt go over twice.
+ensureColumn('transactions', 'xero_invoice_id', 'TEXT');
+
 // Seed the Phase 1 budget categories, drawn from the House Cooper build spec
 // (site services, structure, and finishes actually scoped on this project),
 // only if the table is empty — so re-running the server never duplicates

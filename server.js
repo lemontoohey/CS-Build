@@ -81,7 +81,11 @@ const {
   handleGoogleOauthStart,
   handleGoogleOauthCallback,
   handleGoogleDisconnect,
+  handleXeroOauthStart,
+  handleXeroOauthCallback,
+  handleXeroDisconnect,
 } = require('./routes/settings');
+const { handleXeroPushTransaction } = require('./routes/xero');
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -201,6 +205,12 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/oauth/google/callback') {
       return await handleGoogleOauthCallback(req, res, helpers, query);
     }
+    if (req.method === 'GET' && pathname === '/oauth/xero/start') {
+      return await handleXeroOauthStart(req, res, helpers);
+    }
+    if (req.method === 'GET' && pathname === '/oauth/xero/callback') {
+      return await handleXeroOauthCallback(req, res, helpers, query);
+    }
 
     // --- POST routes (HTML forms) ---
     if (req.method === 'POST' && pathname === '/budget/update') {
@@ -296,6 +306,12 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && pathname === '/settings/google/disconnect') {
       return await handleGoogleDisconnect(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/settings/xero/disconnect') {
+      return await handleXeroDisconnect(req, res, helpers);
+    }
+    if (req.method === 'POST' && pathname === '/api/xero/push-transaction') {
+      return await handleXeroPushTransaction(req, res, helpers);
     }
 
     // --- POST routes (JSON APIs, used by client-side JS for file upload) ---

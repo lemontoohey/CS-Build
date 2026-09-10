@@ -40,6 +40,7 @@ create table if not exists transactions (
   document_id text references documents(id),
   note text,
   ai_generated boolean not null default false,
+  xero_invoice_id text,
   created_at text not null
 );
 

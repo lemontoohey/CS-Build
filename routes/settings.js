@@ -4,6 +4,7 @@ const { readFormBody, redirect } = require('../lib/http');
 const { getAiConfig, saveAiConfig, PROVIDERS } = require('../lib/ai');
 const { getBackendConfig, saveBackendConfig } = require('../lib/config');
 const googleAuth = require('../lib/google-auth');
+const xeroAuth = require('../lib/xero-auth');
 
 const PROVIDER_LABELS = { anthropic: 'Anthropic (Claude)', openai: 'OpenAI (GPT)' };
 
@@ -88,6 +89,46 @@ async function handleSettingsPage(req, res, { sendHtml }, flash) {
     bodyHtml: driveBody,
   });
 
+  // --- Xero accounting sync (scaffolding) — separate from the data
+  // backend above; this is about pushing transactions out to Xero, not
+  // about where CS Build's own data lives.
+  const xeroConnected = xeroAuth.isConnected();
+  const xeroReady = xeroAuth.isXeroClientConfigured();
+  let xeroBody;
+  if (!xeroReady) {
+    xeroBody = `<p class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+      Not set up yet — whoever installed this app needs to finish the one-time Xero Developer setup in the README before this option can be used.
+    </p>`;
+  } else if (xeroConnected) {
+    xeroBody = `<div class="flex items-center gap-3 flex-wrap">
+      <span class="text-sm text-emerald-700">✓ Connected${
+        xeroAuth.getTenantName() ? ' to ' + escapeHtml(xeroAuth.getTenantName()) : ''
+      }.</span>
+      <form method="post" action="/settings/xero/disconnect">
+        <button class="text-sm text-red-700 hover:underline">Disconnect</button>
+      </form>
+    </div>`;
+  } else {
+    xeroBody = `<a href="/oauth/xero/start"
+      class="inline-block text-sm bg-[#9b1b15] hover:bg-[#7a1611] text-white px-3 py-1.5 rounded transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]">
+      Connect Xero
+    </a>`;
+  }
+  const xeroCard = `<div class="rounded-lg border-2 border-slate-200 bg-white p-5 mb-4">
+    <div class="flex items-start gap-3">
+      <span class="text-2xl leading-none">🧾</span>
+      <div class="flex-1">
+        <h3 class="font-semibold text-lg">Xero</h3>
+        <p class="text-sm text-slate-600 mt-0.5 mb-3">
+          Optional. Once connected, transactions on the Dashboard get a "→ Xero" button that pushes that
+          receipt into Xero as a bill, ready for your accountant to code — this app doesn't try to guess
+          GST treatment or account codes, Xero (and your accountant) stay in charge of that.
+        </p>
+        <div>${xeroBody}</div>
+      </div>
+    </div>
+  </div>`;
+
   const body = `
     <h1 class="text-2xl font-bold mb-2">Settings</h1>
 
@@ -97,6 +138,10 @@ async function handleSettingsPage(req, res, { sendHtml }, flash) {
     </p>
     ${localCard}
     ${driveCard}
+
+    <h2 class="text-lg font-semibold mt-10 mb-1">Accounting sync</h2>
+    <p class="text-sm text-slate-600 mb-4">Optional — send transactions straight into your accounting software.</p>
+    ${xeroCard}
 
     <h2 class="text-lg font-semibold mt-10 mb-1">AI receipt reading</h2>
     <p class="text-sm text-slate-600 mb-4">
@@ -195,6 +240,36 @@ async function handleGoogleDisconnect(req, res) {
   redirect(res, '/settings?flash=' + encodeURIComponent('Google Drive disconnected.'));
 }
 
+async function handleXeroOauthStart(req, res) {
+  if (!xeroAuth.isXeroClientConfigured()) {
+    return redirect(
+      res,
+      '/settings?flash=' + encodeURIComponent('Xero is not set up on this install yet — see the README.')
+    );
+  }
+  redirect(res, xeroAuth.buildAuthUrl());
+}
+
+async function handleXeroOauthCallback(req, res, { sendHtml }, query) {
+  if (query.error) {
+    return redirect(res, '/settings?flash=' + encodeURIComponent('Xero sign-in was cancelled.'));
+  }
+  if (!query.code) {
+    return redirect(res, '/settings?flash=' + encodeURIComponent('Xero sign-in did not return a code.'));
+  }
+  try {
+    await xeroAuth.exchangeCodeForTokens(query.code);
+    redirect(res, '/settings?flash=' + encodeURIComponent('Xero connected.'));
+  } catch (err) {
+    redirect(res, '/settings?flash=' + encodeURIComponent('Xero sign-in failed: ' + err.message));
+  }
+}
+
+async function handleXeroDisconnect(req, res) {
+  xeroAuth.disconnect();
+  redirect(res, '/settings?flash=' + encodeURIComponent('Xero disconnected.'));
+}
+
 module.exports = {
   handleSettingsPage,
   handleSettingsAiUpdate,
@@ -203,4 +278,7 @@ module.exports = {
   handleGoogleOauthStart,
   handleGoogleOauthCallback,
   handleGoogleDisconnect,
+  handleXeroOauthStart,
+  handleXeroOauthCallback,
+  handleXeroDisconnect,
 };

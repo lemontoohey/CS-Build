@@ -64,6 +64,18 @@ The "Connect Google Drive" button only appears once whoever's running this app (
 
 After that one-time setup, anyone using the app (including your friend) just clicks "Connect Google Drive" and signs in — no keys, no console, no technical steps on their end.
 
+### Turning on the Xero accounting sync option
+
+Separate from where CS Build's own data lives — this is about pushing transactions out to Xero as bills, for whoever's actually doing the bookkeeping. Once set up, a "→ Xero" button appears next to recent transactions on the Dashboard.
+
+1. Go to https://developer.xero.com/app/manage and create a new app (type "Web app").
+2. Set the redirect URI to `http://localhost:3000/oauth/xero/callback` (or your live URL's equivalent — see the note on this under the Google Drive host-specific step above, same idea).
+3. Copy the Client ID and Client Secret into `.env` as `XERO_CLIENT_ID` and `XERO_CLIENT_SECRET`, then restart the server once.
+4. On the Settings page, click "Connect Xero" and authorise the organisation you want to sync to.
+5. Optional: set `XERO_DEFAULT_ACCOUNT_CODE` in `.env` to an account code that already exists in that organisation's chart of accounts — otherwise bills land coded to Xero's own default "429 — General Expenses".
+
+This is scaffolding, not a finished two-way sync: it pushes one direction only (a transaction becomes a Xero bill, "ACCPAY"), it doesn't try to guess GST treatment (bills land with `LineAmountTypes: NoTax` so your accountant codes tax properly in Xero itself), and it hasn't been run against a real Xero organisation yet — that needs your own Xero Developer app credentials, the same way the Google Drive option needed its own Google Cloud project before anyone could click "Connect."
+
 ## What's here vs. what's next
 
 Built now:
@@ -84,9 +96,24 @@ Built now:
 
 Also built: uploaded documents (receipts, DA approvals, contracts, etc.) follow the Google Drive choice too now, not just the budget/schedule data — important for a hosted deployment, since a server's local disk usually doesn't survive a restart.
 
+Built since, on top of the above:
+- **Plan Measure** — upload a plan PDF, scale it against a known dimension, and click/trace off lengths/areas straight from the drawing; send a measurement to Materials or into a Formulate recipe.
+- **Formulate** — link a BOQ quantity to a recipe (e.g. beam length × depth × footing count = concrete volume) instead of typing it in by hand.
+- **Price Book** — a per-supplier pricing database to check BOQ items against.
+- **Schedule waterfall** — planned vs. actual stage dates drawn as a waterfall chart, not just a table.
+- **AI plan takeoff** — feed it plan pages and it drafts a starting BOQ (floor/roof area, a glazing list, big-ticket volumes); every line is tagged "estimate — confirm before ordering."
+- **AI diary assistant** — talk or type a rough note and it structures it into a proper entry, auto-fills the weather, and flags anything that reads like a delay.
+- **Photo & Media Log** — timestamped photos linked to diary/schedule/BOQ items, with a defect flag for the handover punch-list.
+- **Purchase orders** — turn ticked Materials lines into a formal, printable PO per supplier, with its own status (draft → sent → confirmed).
+- **AI estimate reviewer** on the Dashboard — run-on-demand check that cross-references your budget, BOQ, and compliance data for gaps, surfaced by severity.
+- **Installable, offline-capable (PWA)** — add it to your home screen; the site diary keeps working with no signal and syncs once you're back online.
+- **Client selections** — track choices that aren't locked in yet (tiles, tapware, colours) with a few candidate options each, optionally linked to a BOQ line.
+- **Digital signatures** — a simple draw-and-save signature pad, attachable to a purchase order.
+- **Xero accounting sync (scaffolding)** — push a transaction to Xero as a bill once connected; see "Turning on the Xero accounting sync option" above. Needs its own Xero Developer app credentials to actually use.
+
 Not built yet (see `house-cooper-build-tool-spec.md` for the full plan):
-- AI materials takeoff read straight off the plan drawings (the calculators above cover the "I know the measurements, what do I need" case; reading quantities off a PDF plan set is a different, AI-only capability, not yet built).
-- Voice diary entries.
+- Two-way Xero sync (pulling paid/reconciled status back from Xero) — currently one direction only (push).
+- Progress payment / drawdown tracking against a construction loan.
 
 ## Hosting this somewhere public
 
