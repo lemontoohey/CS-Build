@@ -279,6 +279,17 @@ ensureColumn('diary_entries', 'schedule_note', 'TEXT');
 // can show "Synced" instead of letting the same receipt go over twice.
 ensureColumn('transactions', 'xero_invoice_id', 'TEXT');
 
+// Custom-estimate improvements: once a purchase order is marked
+// "confirmed" (i.e. actually agreed/paid, not just drafted), its real
+// line prices get folded into the Price Book as this build's own price
+// history — so the NEXT estimate on a similar item is grounded in what
+// this build actually paid, not a generic seed rate. `source` marks
+// which price_book_items rows came from a real job vs the seeded
+// reference catalogue; `price_history_recorded` stops a PO's lines from
+// being recorded twice if its status flips back and forth.
+ensureColumn('price_book_items', 'source', 'TEXT');
+ensureColumn('purchase_orders', 'price_history_recorded', 'INTEGER NOT NULL DEFAULT 0');
+
 // Seed the Phase 1 budget categories, drawn from the House Cooper build spec
 // (site services, structure, and finishes actually scoped on this project),
 // only if the table is empty — so re-running the server never duplicates

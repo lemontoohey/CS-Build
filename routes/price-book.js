@@ -45,7 +45,11 @@ async function handlePriceBookPage(req, res, { sendHtml }, query, flash) {
       .map(
         (p) => `<tr class="border-b border-slate-100">
           <td class="py-2 pr-4">
-            <div class="font-medium">${escapeHtml(p.description)}</div>
+            <div class="font-medium">${escapeHtml(p.description)} ${
+              p.source === 'own_job'
+                ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800" title="From a purchase order you actually confirmed on this build">your price</span>'
+                : ''
+            }</div>
             <div class="text-xs text-slate-500">${escapeHtml(p.sku || '')}${p.category ? ' · ' + escapeHtml(p.category) : ''}</div>
           </td>
           <td class="py-2 pr-4">${escapeHtml(p.supplier_name)}</td>

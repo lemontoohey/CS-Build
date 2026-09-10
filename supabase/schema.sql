@@ -215,7 +215,8 @@ create table if not exists price_book_items (
   unit_cost_cents bigint not null,
   category text,
   notes text,
-  sort_order integer not null default 0
+  sort_order integer not null default 0,
+  source text
 );
 
 create table if not exists formulate_recipes (
@@ -236,7 +237,8 @@ create table if not exists purchase_orders (
   status text not null default 'draft',
   notes text,
   signature_id bigint,
-  created_at text not null
+  created_at text not null,
+  price_history_recorded boolean not null default false
 );
 
 create table if not exists purchase_order_lines (

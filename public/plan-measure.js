@@ -667,7 +667,15 @@
           (data.roof_area_sqm ? ' roof area ' + data.roof_area_sqm + ' m2.' : '') +
           '</p>'
         : '') +
-      (data.assumptions ? '<p class="text-xs text-slate-500 mb-3">Assumptions: ' + data.assumptions + '</p>' : '');
+      (data.assumptions ? '<p class="text-xs text-slate-500 mb-3">Assumptions: ' + data.assumptions + '</p>' : '') +
+      (data.unusual_features && data.unusual_features.length
+        ? '<div class="mb-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">' +
+          '<div class="font-semibold mb-1">⚠ Non-standard features noticed on these pages</div>' +
+          '<div class="text-xs mb-1">These didn\'t fit into a normal line below — nothing was dropped, but nothing was priced either. Get these quoted properly.</div>' +
+          '<ul class="list-disc pl-4 space-y-0.5">' +
+          data.unusual_features.map(function (f) { return '<li>' + f + '</li>'; }).join('') +
+          '</ul></div>'
+        : '');
 
     var rows = data.items
       .map(function (item, idx) {
@@ -676,10 +684,17 @@
             return '<option value="' + c.id + '" ' + (String(c.id) === String(item.category_id) ? 'selected' : '') + '>' + c.name + '</option>';
           })
           .join('');
+        var noveltyTag = item.is_novel
+          ? '<div class="text-[11px] text-red-700 font-medium">⚠ non-standard — get a quote' + (item.novelty_reason ? ' (' + item.novelty_reason + ')' : '') + '</div>'
+          : '<div class="text-[11px] text-amber-700">estimate — verify' + (item.source ? ' · ' + item.source : '') + '</div>';
+        var confidenceTag =
+          item.confidence === 'low'
+            ? '<div class="text-[11px] text-slate-400">low confidence reading this from the drawing</div>'
+            : '';
         return (
-          '<tr class="border-b border-slate-100" data-idx="' + idx + '">' +
+          '<tr class="border-b border-slate-100' + (item.is_novel ? ' bg-red-50' : '') + '" data-idx="' + idx + '">' +
           '<td class="py-1.5 pr-2"><input type="checkbox" class="takeoff-check" checked /></td>' +
-          '<td class="py-1.5 pr-2 text-sm">' + item.description + '<div class="text-[11px] text-amber-700">estimate — verify' + (item.source ? ' · ' + item.source : '') + '</div></td>' +
+          '<td class="py-1.5 pr-2 text-sm">' + item.description + noveltyTag + confidenceTag + '</td>' +
           '<td class="py-1.5 pr-2"><select class="takeoff-cat text-xs rounded border border-slate-300 px-1 py-0.5">' + catOptions + '</select></td>' +
           '<td class="py-1.5 pr-2"><input type="text" class="takeoff-qty w-16 text-xs rounded border border-slate-300 px-1 py-0.5" value="' + item.quantity + '" /></td>' +
           '<td class="py-1.5 pr-2 text-xs">' + (item.unit || '') + '</td>' +

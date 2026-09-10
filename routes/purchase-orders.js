@@ -8,6 +8,7 @@ const { layout } = require('../lib/layout');
 const { escapeHtml, centsToDisplay, todayIso } = require('../lib/render');
 const { readFormBody, redirect, notFound } = require('../lib/http');
 const { BUTTON_CLASSES } = require('../lib/theme');
+const { recordConfirmedPoAsPriceHistory } = require('../lib/price-history');
 
 const STATUSES = ['draft', 'sent', 'confirmed'];
 const STATUS_LABELS = { draft: 'Draft', sent: 'Sent', confirmed: 'Confirmed' };
@@ -245,6 +246,17 @@ async function handlePurchaseOrderStatus(req, res, helpers, id) {
   const form = await readFormBody(req);
   if (STATUSES.includes(form.status)) {
     await store.update('purchase_orders', Number(id), { status: form.status });
+  }
+  if (form.status === 'confirmed') {
+    // Bank this PO's real prices into the Price Book as this build's own
+    // history — but only once, even if the status gets flipped back and
+    // forth later.
+    const po = await store.getById('purchase_orders', Number(id));
+    if (po && !po.price_history_recorded) {
+      const lines = await store.getWhere('purchase_order_lines', { purchase_order_id: po.id });
+      await recordConfirmedPoAsPriceHistory(po, lines);
+      await store.update('purchase_orders', po.id, { price_history_recorded: 1 });
+    }
   }
   redirect(res, `/purchase-orders/${id}`);
 }

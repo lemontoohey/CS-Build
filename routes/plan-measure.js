@@ -353,6 +353,8 @@ async function handlePlanMeasureTakeoffApi(req, res, { readJsonBody, sendJson })
         unit: item.unit,
         source: item.source || '',
         confidence: item.confidence || 'medium',
+        is_novel: Boolean(item.is_novel),
+        novelty_reason: item.novelty_reason || '',
       };
     });
 
@@ -361,6 +363,7 @@ async function handlePlanMeasureTakeoffApi(req, res, { readJsonBody, sendJson })
       floor_area_sqm: draft.floor_area_sqm ?? null,
       roof_area_sqm: draft.roof_area_sqm ?? null,
       assumptions: draft.assumptions || '',
+      unusual_features: Array.isArray(draft.unusual_features) ? draft.unusual_features : [],
       items,
     });
   } catch (err) {
