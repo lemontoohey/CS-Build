@@ -35,6 +35,13 @@ const {
   handlePurchaseOrderPrint,
 } = require('./routes/purchase-orders');
 const {
+  handleSelectionsPage,
+  handleSelectionCreate,
+  handleSelectionOptionCreate,
+  handleSelectionOptionChoose,
+  handleSelectionStatus,
+} = require('./routes/selections');
+const {
   handleMaterialsPage,
   handleMaterialNew,
   handleMaterialStatus,
@@ -130,6 +137,9 @@ const server = http.createServer(async (req, res) => {
       const poId = pathname.slice('/purchase-orders/'.length);
       return await handlePurchaseOrderDetail(req, res, helpers, poId, flash);
     }
+    if (req.method === 'GET' && pathname === '/selections') {
+      return await handleSelectionsPage(req, res, helpers, flash);
+    }
     if (req.method === 'GET' && pathname === '/calculators') {
       return await handleCalculatorsPage(req, res, helpers, query, flash);
     }
@@ -217,6 +227,23 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname.startsWith('/purchase-orders/') && pathname.endsWith('/status')) {
       const poId = pathname.slice('/purchase-orders/'.length, -'/status'.length);
       return await handlePurchaseOrderStatus(req, res, helpers, poId);
+    }
+    if (req.method === 'POST' && pathname === '/selections/new') {
+      return await handleSelectionCreate(req, res, helpers);
+    }
+    if (req.method === 'POST') {
+      const chooseMatch = pathname.match(/^\/selections\/(\d+)\/options\/(\d+)\/choose$/);
+      if (chooseMatch) {
+        return await handleSelectionOptionChoose(req, res, helpers, chooseMatch[1], chooseMatch[2]);
+      }
+      const optionMatch = pathname.match(/^\/selections\/(\d+)\/options\/new$/);
+      if (optionMatch) {
+        return await handleSelectionOptionCreate(req, res, helpers, optionMatch[1]);
+      }
+      const statusMatch = pathname.match(/^\/selections\/(\d+)\/status$/);
+      if (statusMatch) {
+        return await handleSelectionStatus(req, res, helpers, statusMatch[1]);
+      }
     }
     if (req.method === 'POST' && pathname === '/materials/status') {
       return await handleMaterialStatus(req, res, helpers);

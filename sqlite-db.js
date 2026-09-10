@@ -223,6 +223,28 @@ db.exec(`
     sku_hint TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0
   );
+
+  CREATE TABLE IF NOT EXISTS selections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT NOT NULL,
+    description TEXT,
+    boq_item_id INTEGER REFERENCES boq_items(id),
+    status TEXT NOT NULL DEFAULT 'pending',
+    due_date TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS selection_options (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    selection_id INTEGER NOT NULL REFERENCES selections(id),
+    label TEXT NOT NULL,
+    supplier TEXT,
+    unit_cost_cents INTEGER,
+    notes TEXT,
+    is_chosen INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+  );
 `);
 
 // --- Lightweight column migrations -----------------------------------

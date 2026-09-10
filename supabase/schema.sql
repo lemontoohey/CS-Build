@@ -273,6 +273,28 @@ create table if not exists formulate_lines (
   sort_order integer not null default 0
 );
 
+create table if not exists selections (
+  id bigint generated always as identity primary key,
+  category text not null,
+  description text,
+  boq_item_id bigint references boq_items(id),
+  status text not null default 'pending',
+  due_date text,
+  notes text,
+  created_at text not null
+);
+
+create table if not exists selection_options (
+  id bigint generated always as identity primary key,
+  selection_id bigint not null references selections(id),
+  label text not null,
+  supplier text,
+  unit_cost_cents integer,
+  notes text,
+  is_chosen integer not null default 0,
+  created_at text not null
+);
+
 insert into compliance_items (regime, item, status, sort_order) values
   ('DA / Council', 'Footings inspection booked & passed', 'pending', 0),
   ('DA / Council', 'Slab inspection booked & passed', 'pending', 1),
