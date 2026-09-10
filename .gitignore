@@ -2,3 +2,7 @@ node_modules/
 .env
 data/
 *.log
+CS-Build-Quick-Reference.docx
+CS-Build-Quick-Reference.pdf
+~$*.docx
+page6-tl.png
